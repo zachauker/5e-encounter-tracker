@@ -1,63 +1,174 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Swords,
+  Plus,
+  Trash2,
+  Settings,
+  Clock,
+  CheckCircle2,
+  PlayCircle,
+} from "lucide-react";
+import { cn, formatDate } from "@/lib/utils";
+import type { Encounter } from "@/lib/db/schema";
+
+const STATUS_CONFIG = {
+  idle: { label: "Ready", icon: <Clock className="w-3 h-3" /> },
+  active: { label: "Active", icon: <PlayCircle className="w-3 h-3" /> },
+  completed: { label: "Done", icon: <CheckCircle2 className="w-3 h-3" /> },
+};
+
+export default function HomePage() {
+  const router = useRouter();
+  const [encounters, setEncounters] = useState<Encounter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/encounters")
+      .then((r) => r.json())
+      .then((data) => { setEncounters(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  async function createEncounter() {
+    if (!newName.trim()) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/encounters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      const encounter = await res.json();
+      router.push(`/encounters/${encounter.id}`);
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function deleteEncounter(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Delete this encounter?")) return;
+    await fetch(`/api/encounters/${id}`, { method: "DELETE" });
+    setEncounters((prev) => prev.filter((enc) => enc.id !== id));
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen">
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/40 flex items-center justify-center">
+              <Swords className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg leading-none">Encounter Tracker</h1>
+              <p className="text-xs text-muted-foreground">D&D Combat Manager</p>
+            </div>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => router.push("/settings")} className="gap-1.5">
+            <Settings className="w-4 h-4" /> Settings
+          </Button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </header>
+
+      <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+        <div className="rounded-xl border border-border bg-card p-6 space-y-3">
+          <h2 className="font-semibold">New Encounter</h2>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Encounter name..."
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && createEncounter()}
+              className="flex-1"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <Button onClick={createEncounter} disabled={creating || !newName.trim()} className="gap-1.5">
+              <Plus className="w-4 h-4" />
+              {creating ? "Creating..." : "Create"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+            Encounters ({encounters.length})
+          </h2>
+
+          {loading && (
+            <div className="text-center py-8 text-muted-foreground text-sm">Loading...</div>
+          )}
+
+          {!loading && encounters.length === 0 && (
+            <div className="text-center py-12 border border-dashed border-border rounded-xl">
+              <Swords className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No encounters yet. Create one above.</p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {encounters.map((enc) => {
+              const status = STATUS_CONFIG[enc.status as keyof typeof STATUS_CONFIG];
+              return (
+                <div
+                  key={enc.id}
+                  onClick={() => router.push(`/encounters/${enc.id}`)}
+                  className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/30 transition-colors cursor-pointer group"
+                >
+                  <div
+                    className={cn(
+                      "w-10 h-10 rounded-lg border flex items-center justify-center flex-none",
+                      enc.status === "active" && "border-primary/40 bg-primary/10",
+                      enc.status === "idle" && "border-border bg-muted",
+                      enc.status === "completed" && "border-muted bg-muted/50"
+                    )}
+                  >
+                    <Swords
+                      className={cn(
+                        "w-4 h-4",
+                        enc.status === "active" && "text-primary",
+                        (enc.status === "idle" || enc.status === "completed") && "text-muted-foreground"
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{enc.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(new Date(enc.updatedAt))}
+                      {enc.round > 1 && ` · Round ${enc.round}`}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-none">
+                    <span
+                      className={cn(
+                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border",
+                        enc.status === "active" && "text-primary border-primary/40 bg-primary/10",
+                        (enc.status === "idle" || enc.status === "completed") && "text-muted-foreground border-border"
+                      )}
+                    >
+                      {status.icon} {status.label}
+                    </span>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      className="opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+                      onClick={(e) => deleteEncounter(enc.id, e)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </main>
     </div>

@@ -1,26 +1,99 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-ring: var(--ring);
+  --color-hp-high: var(--hp-high);
+  --color-hp-med: var(--hp-med);
+  --color-hp-low: var(--hp-low);
+  --color-initiative: var(--initiative);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --radius: 0.625rem;
+  --background: #0f0f11;
+  --foreground: #f2f0eb;
+  --card: #1a1a1f;
+  --card-foreground: #f2f0eb;
+  --border: #2e2e38;
+  --muted: #1e1e26;
+  --muted-foreground: #8a8a9a;
+  --accent: #2a2a36;
+  --accent-foreground: #f2f0eb;
+  --primary: #c0392b;
+  --primary-foreground: #ffffff;
+  --secondary: #1e1e26;
+  --secondary-foreground: #f2f0eb;
+  --destructive: #c0392b;
+  --destructive-foreground: #ffffff;
+  --popover: #1a1a1f;
+  --popover-foreground: #f2f0eb;
+  --ring: #c0392b;
+  --hp-high: #27ae60;
+  --hp-med: #f39c12;
+  --hp-low: #c0392b;
+  --initiative: #d4af37;
+}
+
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Custom scrollbar for the dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Smooth HP bar transitions */
+.hp-bar {
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* Active combatant glow */
+.combatant-active {
+  box-shadow: 0 0 0 2px var(--initiative), 0 0 12px rgba(212, 175, 55, 0.2);
+}
+
+/* Drag-and-drop ghost */
+.combatant-dragging {
+  opacity: 0.4;
 }
