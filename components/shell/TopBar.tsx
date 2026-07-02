@@ -24,11 +24,21 @@ export function TopBar() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
   useEffect(() => {
+    useCampaignStore.persist.rehydrate();
+  }, []);
+
+  useEffect(() => {
     fetch("/api/campaigns")
       .then((r) => r.json())
       .then((data: Campaign[]) => {
         setCampaigns(data);
-        if (!activeCampaignId && data.length > 0) setActiveCampaignId(data[0].id);
+        // Read the live store value instead of the closed-over `activeCampaignId`:
+        // this effect and the rehydrate() effect above both resolve asynchronously,
+        // so the closure value can still be stale (pre-rehydration) by the time this
+        // fetch resolves, which would otherwise clobber a just-rehydrated selection.
+        if (!useCampaignStore.getState().activeCampaignId && data.length > 0) {
+          setActiveCampaignId(data[0].id);
+        }
       });
     // Only run once on mount — activeCampaignId changes shouldn't refetch the list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,6 +110,7 @@ export function TopBar() {
 
         <Link
           href="/settings"
+          aria-label="Settings"
           className="text-muted-foreground hover:text-foreground transition-colors flex-none"
         >
           <Settings className="w-4 h-4" />

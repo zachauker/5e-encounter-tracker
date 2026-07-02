@@ -12,6 +12,6 @@ export const useCampaignStore = create<CampaignState>()(
       activeCampaignId: null,
       setActiveCampaignId: (id) => set({ activeCampaignId: id }),
     }),
-    { name: "campaign-store" }
+    { name: "campaign-store", skipHydration: true }
   )
 );
