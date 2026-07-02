@@ -44,6 +44,7 @@ New Drizzle tables, all scoped by `campaign_id`:
 - **`locations`** — `id`, `campaign_id`, `name`, `notion_url` (nullable), description.
 - **`items`** — `id`, `campaign_id`, `name`, `notion_url` (nullable), description.
 - **`factions`** — `id`, `campaign_id`, `name`, `notion_url` (nullable), description.
+- **`encounters`** gains a `campaign_id` FK, since encounters are campaign-scoped data like everything else here.
 - **Relationship junction tables** — structured (not free-text) links between entities:
   - `character_factions` (character ↔ faction, e.g. affiliation)
   - `character_locations` (character ↔ location, e.g. current location / origin)
