@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ interface SimpleEntityManagerProps {
   icon: LucideIcon;
 }
 
-export function SimpleEntityManager({ resourcePath, label, icon: Icon }: SimpleEntityManagerProps) {
+function SimpleEntityManagerInner({ resourcePath, label, icon: Icon }: SimpleEntityManagerProps) {
   const searchParams = useSearchParams();
   const { activeCampaignId } = useCampaignStore();
   const [entities, setEntities] = useState<SimpleEntity[]>([]);
@@ -186,5 +186,13 @@ export function SimpleEntityManager({ resourcePath, label, icon: Icon }: SimpleE
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export function SimpleEntityManager(props: SimpleEntityManagerProps) {
+  return (
+    <Suspense fallback={null}>
+      <SimpleEntityManagerInner {...props} />
+    </Suspense>
   );
 }

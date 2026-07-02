@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { useCampaignStore } from "@/lib/store/campaign-store";
 import { CharacterFormDialog, type CharacterWithLinks } from "@/components/entities/CharacterFormDialog";
 import type { Character } from "@/lib/db/schema";
 
-export default function CharactersPage() {
+function CharactersPageInner() {
   const searchParams = useSearchParams();
   const { activeCampaignId } = useCampaignStore();
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -122,5 +122,13 @@ export default function CharactersPage() {
         onSaved={load}
       />
     </div>
+  );
+}
+
+export default function CharactersPage() {
+  return (
+    <Suspense fallback={null}>
+      <CharactersPageInner />
+    </Suspense>
   );
 }
