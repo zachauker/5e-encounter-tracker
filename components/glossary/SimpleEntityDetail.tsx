@@ -50,25 +50,46 @@ export function SimpleEntityDetail({ resourcePath, label, icon: Icon }: SimpleEn
   }, [resourcePath, id]);
 
   useEffect(() => {
-    Promise.resolve().then(load);
-  }, [load]);
+    let cancelled = false;
+    async function run() {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/${resourcePath}/${id}`);
+        if (cancelled) return;
+        setEntity(res.ok ? await res.json() : null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [resourcePath, id]);
 
   useEffect(() => {
     if (!entity?.notionUrl) return;
-    Promise.resolve()
-      .then(() => {
-        setNotionLoading(true);
-        setNotionError(null);
-        setNotionBlocks(null);
-        return fetch(`/api/notion/page?url=${encodeURIComponent(entity.notionUrl!)}`);
-      })
-      .then((r) => r.json())
-      .then((data) => {
+    let cancelled = false;
+    async function run(url: string) {
+      setNotionLoading(true);
+      setNotionError(null);
+      setNotionBlocks(null);
+      try {
+        const r = await fetch(`/api/notion/page?url=${encodeURIComponent(url)}`);
+        const data = await r.json();
+        if (cancelled) return;
         if (data.error) setNotionError(data.error);
         else setNotionBlocks(data.blocks);
-      })
-      .catch(() => setNotionError("Failed to fetch Notion page"))
-      .finally(() => setNotionLoading(false));
+      } catch {
+        if (!cancelled) setNotionError("Failed to fetch Notion page");
+      } finally {
+        if (!cancelled) setNotionLoading(false);
+      }
+    }
+    run(entity.notionUrl);
+    return () => {
+      cancelled = true;
+    };
   }, [entity?.notionUrl]);
 
   async function remove() {
