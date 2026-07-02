@@ -27,6 +27,31 @@ interface CharacterFormDialogProps {
   onSaved: () => void;
 }
 
+function RelationList({
+  list,
+  selected,
+  onToggle,
+}: {
+  list: { id: string; name: string }[];
+  selected: string[];
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <ScrollArea className="h-28 border border-border rounded-md p-2">
+      {list.length === 0 && <p className="text-xs text-muted-foreground px-1">None yet.</p>}
+      {list.map((item) => (
+        <label
+          key={item.id}
+          className="flex items-center gap-2 px-1 py-1 text-sm cursor-pointer hover:bg-accent rounded"
+        >
+          <input type="checkbox" checked={selected.includes(item.id)} onChange={() => onToggle(item.id)} />
+          {item.name}
+        </label>
+      ))}
+    </ScrollArea>
+  );
+}
+
 export function CharacterFormDialog({
   open,
   onClose,
@@ -34,40 +59,36 @@ export function CharacterFormDialog({
   character,
   onSaved,
 }: CharacterFormDialogProps) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState<"pc" | "npc">("npc");
-  const [description, setDescription] = useState("");
-  const [notionUrl, setNotionUrl] = useState("");
-  const [ddbCharacterId, setDdbCharacterId] = useState("");
+  const [name, setName] = useState(character?.name ?? "");
+  const [type, setType] = useState<"pc" | "npc">(character?.type ?? "npc");
+  const [description, setDescription] = useState(character?.description ?? "");
+  const [notionUrl, setNotionUrl] = useState(character?.notionUrl ?? "");
+  const [ddbCharacterId, setDdbCharacterId] = useState(character?.ddbCharacterId ?? "");
   const [factions, setFactions] = useState<Faction[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [items, setItems] = useState<Item[]>([]);
-  const [factionIds, setFactionIds] = useState<string[]>([]);
-  const [locationIds, setLocationIds] = useState<string[]>([]);
-  const [itemIds, setItemIds] = useState<string[]>([]);
+  const [factionIds, setFactionIds] = useState<string[]>(character?.factionIds ?? []);
+  const [locationIds, setLocationIds] = useState<string[]>(character?.locationIds ?? []);
+  const [itemIds, setItemIds] = useState<string[]>(character?.itemIds ?? []);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setName(character?.name ?? "");
-    setType(character?.type ?? "npc");
-    setDescription(character?.description ?? "");
-    setNotionUrl(character?.notionUrl ?? "");
-    setDdbCharacterId(character?.ddbCharacterId ?? "");
-    setFactionIds(character?.factionIds ?? []);
-    setLocationIds(character?.locationIds ?? []);
-    setItemIds(character?.itemIds ?? []);
 
     Promise.all([
       fetch("/api/factions").then((r) => r.json()),
       fetch("/api/locations").then((r) => r.json()),
       fetch("/api/items").then((r) => r.json()),
-    ]).then(([f, l, i]) => {
-      setFactions(f);
-      setLocations(l);
-      setItems(i);
-    });
-  }, [open, character]);
+    ])
+      .then(([f, l, i]) => {
+        setFactions(f);
+        setLocations(l);
+        setItems(i);
+      })
+      .catch(() => {
+        // Relationship lookups are optional for the form; leave lists empty on failure.
+      });
+  }, [open]);
 
   function toggle(list: string[], setList: (v: string[]) => void, id: string) {
     setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
@@ -125,31 +146,6 @@ export function CharacterFormDialog({
     } finally {
       setSaving(false);
     }
-  }
-
-  function RelationList({
-    list,
-    selected,
-    onToggle,
-  }: {
-    list: { id: string; name: string }[];
-    selected: string[];
-    onToggle: (id: string) => void;
-  }) {
-    return (
-      <ScrollArea className="h-28 border border-border rounded-md p-2">
-        {list.length === 0 && <p className="text-xs text-muted-foreground px-1">None yet.</p>}
-        {list.map((item) => (
-          <label
-            key={item.id}
-            className="flex items-center gap-2 px-1 py-1 text-sm cursor-pointer hover:bg-accent rounded"
-          >
-            <input type="checkbox" checked={selected.includes(item.id)} onChange={() => onToggle(item.id)} />
-            {item.name}
-          </label>
-        ))}
-      </ScrollArea>
-    );
   }
 
   return (

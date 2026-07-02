@@ -29,18 +29,30 @@ export default function CharactersPage() {
     load();
   }, [load]);
 
-  const openEdit = useCallback(async (id: string) => {
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId) return;
+    let cancelled = false;
+    (async () => {
+      const res = await fetch(`/api/characters/${openId}`);
+      if (!res.ok || cancelled) return;
+      const data: CharacterWithLinks = await res.json();
+      if (cancelled) return;
+      setEditing(data);
+      setDialogOpen(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
+
+  async function openEdit(id: string) {
     const res = await fetch(`/api/characters/${id}`);
     if (!res.ok) return;
     const data: CharacterWithLinks = await res.json();
     setEditing(data);
     setDialogOpen(true);
-  }, []);
-
-  useEffect(() => {
-    const openId = searchParams.get("open");
-    if (openId) openEdit(openId);
-  }, [searchParams, openEdit]);
+  }
 
   async function remove(id: string, e: React.MouseEvent) {
     e.stopPropagation();
@@ -102,6 +114,7 @@ export default function CharactersPage() {
       </div>
 
       <CharacterFormDialog
+        key={editing?.id ?? "new"}
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         campaignId={activeCampaignId ?? ""}
