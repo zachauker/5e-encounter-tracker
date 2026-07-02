@@ -1,13 +1,28 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { characters, locations, items, factions, encounters } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const campaignId = searchParams.get("campaignId");
+
   const [chars, locs, itms, facs, encs] = await Promise.all([
-    db.query.characters.findMany(),
-    db.query.locations.findMany(),
-    db.query.items.findMany(),
-    db.query.factions.findMany(),
-    db.query.encounters.findMany(),
+    campaignId
+      ? db.query.characters.findMany({ where: eq(characters.campaignId, campaignId) })
+      : db.query.characters.findMany(),
+    campaignId
+      ? db.query.locations.findMany({ where: eq(locations.campaignId, campaignId) })
+      : db.query.locations.findMany(),
+    campaignId
+      ? db.query.items.findMany({ where: eq(items.campaignId, campaignId) })
+      : db.query.items.findMany(),
+    campaignId
+      ? db.query.factions.findMany({ where: eq(factions.campaignId, campaignId) })
+      : db.query.factions.findMany(),
+    campaignId
+      ? db.query.encounters.findMany({ where: eq(encounters.campaignId, campaignId) })
+      : db.query.encounters.findMany(),
   ]);
 
   const results = [

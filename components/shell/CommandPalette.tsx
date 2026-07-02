@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUIStore } from "@/lib/store/ui-store";
+import { useCampaignStore } from "@/lib/store/campaign-store";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -18,6 +19,7 @@ export function CommandPalette() {
   const router = useRouter();
   const open = useUIStore((s) => s.commandPaletteOpen);
   const setOpen = useUIStore((s) => s.setCommandPaletteOpen);
+  const { activeCampaignId } = useCampaignStore();
   const [query, setQuery] = useState("");
   const [allResults, setAllResults] = useState<SearchResult[]>([]);
 
@@ -34,10 +36,11 @@ export function CommandPalette() {
 
   useEffect(() => {
     if (!open) return;
-    fetch("/api/search")
+    const url = activeCampaignId ? `/api/search?campaignId=${activeCampaignId}` : "/api/search";
+    fetch(url)
       .then((r) => r.json())
       .then(setAllResults);
-  }, [open]);
+  }, [open, activeCampaignId]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
