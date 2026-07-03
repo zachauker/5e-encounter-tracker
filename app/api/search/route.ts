@@ -26,10 +26,10 @@ export async function GET(req: Request) {
   ]);
 
   const results = [
-    ...chars.map((c) => ({ id: c.id, name: c.name, type: "character", href: `/characters?open=${c.id}` })),
-    ...locs.map((l) => ({ id: l.id, name: l.name, type: "location", href: `/locations?open=${l.id}` })),
-    ...itms.map((i) => ({ id: i.id, name: i.name, type: "item", href: `/items?open=${i.id}` })),
-    ...facs.map((f) => ({ id: f.id, name: f.name, type: "faction", href: `/factions?open=${f.id}` })),
+    ...chars.map((c) => ({ id: c.id, name: c.name, type: "character", href: `/characters/${c.id}` })),
+    ...locs.map((l) => ({ id: l.id, name: l.name, type: "location", href: `/locations/${l.id}` })),
+    ...itms.map((i) => ({ id: i.id, name: i.name, type: "item", href: `/items/${i.id}` })),
+    ...facs.map((f) => ({ id: f.id, name: f.name, type: "faction", href: `/factions/${f.id}` })),
     ...encs.map((e) => ({ id: e.id, name: e.name, type: "encounter", href: `/encounters/${e.id}` })),
   ];
 

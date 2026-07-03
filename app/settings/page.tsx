@@ -23,6 +23,8 @@ export default function SettingsPage() {
   const [testingUrl, setTestingUrl] = useState(false);
   const [urlTestResult, setUrlTestResult] = useState<string | null>(null);
   const [urlTestOk, setUrlTestOk] = useState(false);
+  const [notionToken, setNotionToken] = useState("");
+  const [notionConfigured, setNotionConfigured] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -30,6 +32,7 @@ export default function SettingsPage() {
       .then((data) => {
         setCampaignName(data.campaign_name ?? "");
         try { setShareUrls(JSON.parse(data.ddb_share_urls ?? "[]")); } catch {}
+        setNotionConfigured(Boolean(data.notion_token));
       });
   }, []);
 
@@ -49,6 +52,17 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveNotionToken() {
+    if (!notionToken.trim()) return;
+    await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notion_token: notionToken.trim() }),
+    });
+    setNotionConfigured(true);
+    setNotionToken("");
   }
 
   async function addShareUrl() {
@@ -199,6 +213,39 @@ export default function SettingsPage() {
               No characters added yet
             </p>
           )}
+        </section>
+
+        {/* Notion Integration */}
+        <section className="rounded-xl border border-border bg-card p-6 space-y-4">
+          <div>
+            <h2 className="font-semibold">Notion Integration</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Paste your Notion internal integration secret to pull linked page content into character, location, item, and faction detail pages. Create one at{" "}
+              <a href="https://www.notion.so/my-integrations" target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                notion.so/my-integrations
+              </a>
+              , then share the relevant pages with it.
+            </p>
+          </div>
+
+          {notionConfigured && (
+            <p className="text-sm text-[var(--hp-high)] flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5" /> Token configured
+            </p>
+          )}
+
+          <div className="flex gap-2">
+            <Input
+              type="password"
+              placeholder={notionConfigured ? "Replace token..." : "secret_..."}
+              value={notionToken}
+              onChange={(e) => setNotionToken(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={saveNotionToken} disabled={!notionToken.trim()} className="flex-none">
+              Save
+            </Button>
+          </div>
         </section>
 
         <Button onClick={save} disabled={saving} className="gap-1.5 w-full">

@@ -3,17 +3,14 @@ import { db } from "@/lib/db";
 import { settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-const ALLOWED_KEYS = ["campaign_name", "default_roll_advantage", "ddb_share_urls"];
+const ALLOWED_KEYS = ["campaign_name", "default_roll_advantage", "ddb_share_urls", "notion_token"];
+const MASKED_KEYS = new Set(["ddb_cobalt_token", "notion_token"]);
 
 export async function GET() {
   const rows = await db.query.settings.findMany();
   const result: Record<string, string> = {};
   for (const row of rows) {
-    if (row.key !== "ddb_cobalt_token") {
-      result[row.key] = row.value;
-    } else {
-      result[row.key] = row.value ? "configured" : "";
-    }
+    result[row.key] = MASKED_KEYS.has(row.key) ? (row.value ? "configured" : "") : row.value;
   }
   return NextResponse.json(result);
 }
