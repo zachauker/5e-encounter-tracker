@@ -19,7 +19,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     throw err;
   }
 
-  return new NextResponse(buffer as unknown as ArrayBuffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": mapImageContentType(map.imagePath),
       "Cache-Control": "no-store",
