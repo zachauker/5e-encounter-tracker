@@ -42,8 +42,23 @@ export function MapViewer() {
   });
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
   const [editingMarker, setEditingMarker] = useState<ResolvedMarker | null>(null);
+  const [minScale, setMinScale] = useState(0.5);
   const draggingRef = useRef<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+
+  function handleImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const viewport = viewportRef.current;
+    const { naturalWidth, naturalHeight } = e.currentTarget;
+    if (!viewport || !naturalWidth || !naturalHeight) return;
+    const { width: viewportWidth, height: viewportHeight } = viewport.getBoundingClientRect();
+    const fitScale = Math.min(viewportWidth / naturalWidth, viewportHeight / naturalHeight);
+    // Never force small images to scale up as their own "minimum" (a fit
+    // scale > 1 would mean the image is smaller than the viewport), and
+    // never let it collapse to an unusable sliver for extreme aspect
+    // ratios or enormous source images.
+    setMinScale(Math.min(1, Math.max(0.05, fitScale)));
+  }
 
   const loadMarkers = useCallback(async () => {
     const res = await fetch(`/api/maps/${id}/markers`);
@@ -172,8 +187,8 @@ export function MapViewer() {
         </Button>
       </div>
 
-      <div className="relative flex-1 overflow-hidden bg-black/40">
-        <TransformWrapper panning={{ disabled: addMode }} doubleClick={{ disabled: true }} minScale={0.5} maxScale={6}>
+      <div ref={viewportRef} className="relative flex-1 overflow-hidden bg-black/40">
+        <TransformWrapper disabled={addMode} doubleClick={{ disabled: true }} minScale={minScale} maxScale={6}>
           <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-fit !h-fit">
             <div ref={containerRef} className="relative" style={{ cursor: addMode ? "crosshair" : "default" }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- locally-served map image, arbitrary user-upload dimensions */}
@@ -181,6 +196,7 @@ export function MapViewer() {
                 src={`/api/maps/${map.id}/image`}
                 alt={map.name}
                 onClick={handleImageClick}
+                onLoad={handleImageLoad}
                 className="max-w-none select-none"
                 draggable={false}
               />
