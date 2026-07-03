@@ -58,6 +58,15 @@ jobs:
     steps:
       - name: Trigger deploy webhook
         run: |
-          curl -fsS -X POST \
+          response=$(curl -fsS -X POST \
             -H "X-Deploy-Secret: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}" \
-            "${{ vars.DEPLOY_WEBHOOK_URL }}"
+            "${{ vars.DEPLOY_WEBHOOK_URL }}")
+          echo "$response"
+          # adnanh/webhook returns HTTP 200 even when the trigger rule
+          # doesn't match (just with a different body), so curl's own
+          # exit-status check isn't enough to catch an auth/config
+          # regression here — verify the actual response body too.
+          if [ "$response" != "Deploy triggered" ]; then
+            echo "::error::Webhook did not report a successful trigger"
+            exit 1
+          fi

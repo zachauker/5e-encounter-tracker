@@ -11,4 +11,4 @@ FROM alpine:latest
 RUN apk add --no-cache docker-cli docker-cli-compose git ca-certificates
 COPY --from=build /webhook /usr/local/bin/webhook
 ENTRYPOINT ["webhook"]
-CMD ["-hooks=/etc/webhook/hooks.json", "-verbose", "-port=9000"]
+CMD ["-hooks=/etc/webhook/hooks.json", "-template", "-verbose", "-port=9000"]
