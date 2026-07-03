@@ -95,21 +95,29 @@ export function MapViewer() {
       const y = Math.min(1, Math.max(0, (ev.clientY - rect.top) / rect.height));
       setMarkers((prev) => prev.map((m) => (m.id === markerId ? { ...m, x, y } : m)));
     }
-    async function onUp(ev: PointerEvent) {
+    function cleanup() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      draggingRef.current = null;
+    }
+    async function onUp(ev: PointerEvent) {
+      cleanup();
       const rect = container!.getBoundingClientRect();
       const x = Math.min(1, Math.max(0, (ev.clientX - rect.left) / rect.width));
       const y = Math.min(1, Math.max(0, (ev.clientY - rect.top) / rect.height));
-      draggingRef.current = null;
       await fetch(`/api/maps/markers/${markerId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ x, y }),
       });
     }
+    function onCancel() {
+      cleanup();
+    }
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
   }
 
   const selectedMarker = markers.find((m) => m.id === selectedId) ?? null;
