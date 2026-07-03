@@ -1,0 +1,27 @@
+services:
+  webhook:
+    build: .
+    container_name: encounter-tracker-webhook
+    environment:
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - DEPLOY_PATH=${DEPLOY_PATH}
+    volumes:
+      - ./hooks.json:/etc/webhook/hooks.json:ro
+      # Docker socket: lets scripts/update.sh (run inside this container)
+      # control the host's Docker daemon to redeploy encounter-tracker.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Bind-mounted at the identical path on both sides: this container
+      # talks to the HOST's Docker daemon via the socket above, so relative
+      # volume paths in encounter-tracker's own docker-compose.yml (e.g.
+      # ./data:/data) are resolved by that daemon against this same
+      # absolute path. Must match DEPLOY_PATH exactly.
+      - ${DEPLOY_PATH}:${DEPLOY_PATH}
+    ports:
+      - "9000:9000"
+    networks:
+      - oakwoodproxy
+    restart: unless-stopped
+
+networks:
+  oakwoodproxy:
+    external: true

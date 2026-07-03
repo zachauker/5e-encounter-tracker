@@ -1,0 +1,18 @@
+[
+  {
+    "id": "deploy",
+    "execute-command": "{{ getenv \"DEPLOY_PATH\" }}/scripts/update.sh",
+    "command-working-directory": "{{ getenv \"DEPLOY_PATH\" }}",
+    "response-message": "Deploy triggered",
+    "trigger-rule": {
+      "match": {
+        "type": "value",
+        "value": "{{ getenv \"WEBHOOK_SECRET\" }}",
+        "parameter": {
+          "source": "header",
+          "name": "X-Deploy-Secret"
+        }
+      }
+    }
+  }
+]

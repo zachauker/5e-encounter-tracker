@@ -1,7 +1,6 @@
 services:
   encounter-tracker:
     image: ghcr.io/zachauker/5e-encounter-tracker:latest
-    build: .
     container_name: encounter-tracker
     ports:
       - "7542:3000"
