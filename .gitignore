@@ -47,3 +47,6 @@ next-env.d.ts
 /data/*
 !/data/.gitkeep
 .superpowers/
+
+# local map image storage (used when DB_PATH isn't set, e.g. manual/local testing)
+/maps/

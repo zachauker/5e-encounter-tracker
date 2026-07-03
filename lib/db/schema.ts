@@ -135,6 +135,30 @@ export const characterItems = sqliteTable(
   (t) => [primaryKey({ columns: [t.characterId, t.itemId] })]
 );
 
+export const maps = sqliteTable("maps", {
+  id: text("id").primaryKey(),
+  campaignId: text("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  imagePath: text("image_path").notNull(),
+  parentMapId: text("parent_map_id"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+export const mapMarkers = sqliteTable("map_markers", {
+  id: text("id").primaryKey(),
+  mapId: text("map_id").notNull().references(() => maps.id, { onDelete: "cascade" }),
+  x: real("x").notNull(),
+  y: real("y").notNull(),
+  type: text("type", { enum: ["location", "faction", "character", "submap", "note"] }).notNull(),
+  entityId: text("entity_id"),
+  targetMapId: text("target_map_id"),
+  title: text("title"),
+  note: text("note"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
 export type Encounter = typeof encounters.$inferSelect;
 export type NewEncounter = typeof encounters.$inferInsert;
 export type Combatant = typeof combatants.$inferSelect;
@@ -153,3 +177,7 @@ export type Item = typeof items.$inferSelect;
 export type NewItem = typeof items.$inferInsert;
 export type Faction = typeof factions.$inferSelect;
 export type NewFaction = typeof factions.$inferInsert;
+export type MapRow = typeof maps.$inferSelect;
+export type NewMapRow = typeof maps.$inferInsert;
+export type MapMarker = typeof mapMarkers.$inferSelect;
+export type NewMapMarker = typeof mapMarkers.$inferInsert;
