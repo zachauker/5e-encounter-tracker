@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Pencil, Trash2, Loader2, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Loader2, Map as MapIcon, type LucideIcon } from "lucide-react";
 import { NotionBlocks } from "@/components/glossary/NotionBlocks";
 import { RelatedCard } from "@/components/glossary/RelatedCard";
 import { SimpleEntityFormDialog } from "@/components/entities/SimpleEntityFormDialog";
@@ -18,6 +18,7 @@ interface SimpleEntityDetailData {
   description: string | null;
   notionUrl: string | null;
   linkedCharacters: { id: string; name: string; type: string }[];
+  mapMarkers?: { mapId: string; mapName: string; markerId: string }[];
 }
 
 interface SimpleEntityDetailProps {
@@ -146,6 +147,24 @@ export function SimpleEntityDetail({ resourcePath, label, icon: Icon }: SimpleEn
 
         <TabsContent value="overview" className="space-y-4 pt-4">
           {entity.description && <p className="text-sm text-muted-foreground">{entity.description}</p>}
+
+          {entity.mapMarkers && entity.mapMarkers.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">On the Map</h3>
+              <div className="flex flex-wrap gap-2">
+                {entity.mapMarkers.map((m) => (
+                  <Link
+                    key={m.markerId}
+                    href={`/maps/${m.mapId}`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:border-primary/50 hover:bg-accent/30 transition-colors text-sm"
+                  >
+                    <MapIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="font-medium">{m.mapName}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {entity.linkedCharacters.length > 0 && (
             <div className="space-y-3">

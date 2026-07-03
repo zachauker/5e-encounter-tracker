@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Pencil, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Loader2, Map as MapIcon } from "lucide-react";
 import { NotionBlocks } from "@/components/glossary/NotionBlocks";
 import { RelatedCard } from "@/components/glossary/RelatedCard";
 import { StatBlock } from "@/components/tracker/StatBlock";
@@ -216,6 +216,24 @@ export default function CharacterDetailPage() {
 
         <TabsContent value="overview" className="space-y-4 pt-4">
           {character.description && <p className="text-sm text-muted-foreground">{character.description}</p>}
+
+          {character.mapMarkers.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">On the Map</h3>
+              <div className="flex flex-wrap gap-2">
+                {character.mapMarkers.map((m) => (
+                  <Link
+                    key={m.markerId}
+                    href={`/maps/${m.mapId}`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:border-primary/50 hover:bg-accent/30 transition-colors text-sm"
+                  >
+                    <MapIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="font-medium">{m.mapName}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {(factions.length > 0 || locations.length > 0 || items.length > 0) && (
             <div className="space-y-3">
