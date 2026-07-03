@@ -35,7 +35,11 @@ export function MapViewer() {
   const [markers, setMarkers] = useState<ResolvedMarker[]>([]);
   const [loading, setLoading] = useState(true);
   const [addMode, setAddMode] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const match = window.location.hash.match(/^#marker-(.+)$/);
+    return match ? match[1] : null;
+  });
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
   const [editingMarker, setEditingMarker] = useState<ResolvedMarker | null>(null);
   const draggingRef = useRef<string | null>(null);
@@ -63,20 +67,6 @@ export function MapViewer() {
       cancelled = true;
     };
   }, [id, loadMarkers]);
-
-  useEffect(() => {
-    if (markers.length === 0) return;
-    // Deferred a tick (matches the async-continuation pattern used by the
-    // Notion/DDB fetch effects above) so setSelectedId isn't called
-    // synchronously in the effect body, per react-hooks/set-state-in-effect.
-    Promise.resolve().then(() => {
-      const hash = window.location.hash;
-      const match = hash.match(/^#marker-(.+)$/);
-      if (match && markers.some((m) => m.id === match[1])) {
-        setSelectedId(match[1]);
-      }
-    });
-  }, [markers]);
 
   function handleImageClick(e: React.MouseEvent<HTMLImageElement>) {
     if (!addMode) return;
