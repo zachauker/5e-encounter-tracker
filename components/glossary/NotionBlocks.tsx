@@ -95,7 +95,17 @@ export function NotionBlocks({ blocks }: { blocks: NotionBlockData[] }) {
               <img key={b.id} src={b.imageUrl} alt="" className="rounded-lg border border-border max-w-full" />
             ) : null;
           default:
-            return null;
+            return b.notionUrl ? (
+              <a
+                key={b.id}
+                href={b.notionUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block text-primary underline text-xs"
+              >
+                View in Notion ↗
+              </a>
+            ) : null;
         }
       })}
     </div>

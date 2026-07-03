@@ -22,6 +22,7 @@ export interface NotionBlockData {
   richText?: NotionRichText[];
   checked?: boolean;
   imageUrl?: string;
+  notionUrl?: string;
 }
 
 const SUPPORTED_TYPES = new Set([
@@ -73,7 +74,14 @@ export async function fetchNotionPageBlocks(pageId: string, token: string): Prom
 
     for (const raw of res.results) {
       const block = raw as unknown as Record<string, unknown> & { id: string; type: string };
-      if (!SUPPORTED_TYPES.has(block.type)) continue;
+      if (!SUPPORTED_TYPES.has(block.type)) {
+        blocks.push({
+          id: block.id,
+          type: block.type,
+          notionUrl: `https://www.notion.so/${pageId}#${block.id.replace(/-/g, "")}`,
+        });
+        continue;
+      }
 
       const data = block[block.type] as Record<string, unknown>;
       blocks.push({
