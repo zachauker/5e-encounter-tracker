@@ -64,6 +64,20 @@ export function MapViewer() {
     };
   }, [id, loadMarkers]);
 
+  useEffect(() => {
+    if (markers.length === 0) return;
+    // Deferred a tick (matches the async-continuation pattern used by the
+    // Notion/DDB fetch effects above) so setSelectedId isn't called
+    // synchronously in the effect body, per react-hooks/set-state-in-effect.
+    Promise.resolve().then(() => {
+      const hash = window.location.hash;
+      const match = hash.match(/^#marker-(.+)$/);
+      if (match && markers.some((m) => m.id === match[1])) {
+        setSelectedId(match[1]);
+      }
+    });
+  }, [markers]);
+
   function handleImageClick(e: React.MouseEvent<HTMLImageElement>) {
     if (!addMode) return;
     const rect = e.currentTarget.getBoundingClientRect();
