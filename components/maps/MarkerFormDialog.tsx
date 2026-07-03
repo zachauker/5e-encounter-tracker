@@ -142,7 +142,13 @@ export function MarkerFormDialog({ mapId, campaignId, position, marker, onClose,
             {TYPE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => setType(opt.value)}
+                onClick={() => {
+                  setType(opt.value);
+                  setEntityId("");
+                  setTargetMapId("");
+                  setUploadName("");
+                  setUploadFile(null);
+                }}
                 className={cn(
                   "rounded-md border px-2 py-1.5 text-xs transition-colors",
                   type === opt.value
@@ -174,7 +180,13 @@ export function MarkerFormDialog({ mapId, campaignId, position, marker, onClose,
             <div className="space-y-2">
               <select
                 value={targetMapId}
-                onChange={(e) => setTargetMapId(e.target.value)}
+                onChange={(e) => {
+                  setTargetMapId(e.target.value);
+                  if (e.target.value) {
+                    setUploadName("");
+                    setUploadFile(null);
+                  }
+                }}
                 className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm"
               >
                 <option value="">Select an existing map...</option>
@@ -185,7 +197,14 @@ export function MarkerFormDialog({ mapId, campaignId, position, marker, onClose,
                 ))}
               </select>
               <p className="text-xs text-muted-foreground">Or upload a new map to nest here:</p>
-              <Input placeholder="New map name" value={uploadName} onChange={(e) => setUploadName(e.target.value)} />
+              <Input
+                placeholder="New map name"
+                value={uploadName}
+                onChange={(e) => {
+                  setUploadName(e.target.value);
+                  if (e.target.value) setTargetMapId("");
+                }}
+              />
               <input
                 type="file"
                 accept="image/*"
