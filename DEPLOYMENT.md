@@ -10,7 +10,7 @@ to `main`.
 
 ```
 push to main
-  -> GitHub Actions: build image, push to ghcr.io/zachauker/5e-encounter-tracker:latest
+  -> GitHub Actions: build image, push to ghcr.io/zachauker/5e-campaign-hub:latest
   -> GitHub Actions: POST to the deploy webhook (signed with a shared secret)
   -> Unraid: webhook container runs scripts/update.sh
        -> git pull (keeps docker-compose.yml etc. in sync)
@@ -63,7 +63,7 @@ anywhere in this chain risks pointing a deploy at an empty `./data` instead
 of your real one.
 
 ```bash
-git clone git@github.com:zachauker/5e-encounter-tracker.git /mnt/user/appdata/encounter-tracker
+git clone git@github.com:zachauker/5e-campaign-hub.git /mnt/user/appdata/encounter-tracker
 cd /mnt/user/appdata/encounter-tracker
 docker compose up -d
 ```
@@ -212,6 +212,24 @@ easy to re-trip if this ever needs to be rebuilt from scratch:
   change, or something similar recurs, verify with:
   ```bash
   docker inspect encounter-tracker --format '{{.Image}}'
-  docker image inspect ghcr.io/zachauker/5e-encounter-tracker:latest --format '{{.Id}}'
+  docker image inspect ghcr.io/zachauker/5e-campaign-hub:latest --format '{{.Id}}'
   ```
   If those two image IDs don't match, force it: `docker compose down && docker compose up -d`.
+- **The deploy pipeline runs green end to end (git pull, image pull,
+  container recreate all succeed) but the app never actually changes, no
+  matter what's in the commit.** Check whether `docker-compose.yml`'s
+  `image:` and the GHCR image the CI workflow actually pushed to are the
+  *same* package name. `IMAGE_NAME: ${{ github.repository }}` in
+  `.github/workflows/docker.yml` resolves to whatever the repo is named
+  *right now* — if the repo gets renamed on GitHub, CI silently starts
+  pushing to a brand new GHCR package under the new name, while
+  `docker-compose.yml` keeps pulling the old, now-frozen one. This is easy
+  to miss because `git pull`/`git clone`/`gh` calls using the old repo URL
+  keep working fine — GitHub transparently redirects those — but GHCR
+  package names do **not** follow a rename the same way, so this failure
+  produces zero errors anywhere in the pipeline: git pull succeeds, `docker
+  compose pull` succeeds (it just keeps re-pulling the same stale tag),
+  and the container recreates cleanly. The only tell is the deployed image's
+  ID never changing across multiple genuinely different commits. Confirm by
+  checking the tag the "Build and push" step in the Actions log actually
+  used, and make sure `docker-compose.yml`'s `image:` matches it exactly.
