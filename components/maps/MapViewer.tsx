@@ -83,7 +83,7 @@ export function MapViewer() {
     };
   }, [id, loadMarkers]);
 
-  function handleImageClick(e: React.MouseEvent<HTMLImageElement>) {
+  function handleImageClick(e: React.MouseEvent<HTMLDivElement>) {
     if (!addMode) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setPendingPosition({
@@ -190,12 +190,16 @@ export function MapViewer() {
       <div ref={viewportRef} className="relative flex-1 overflow-hidden bg-black/40">
         <TransformWrapper disabled={addMode} doubleClick={{ disabled: true }} minScale={minScale} maxScale={6}>
           <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-fit !h-fit">
-            <div ref={containerRef} className="relative" style={{ cursor: addMode ? "crosshair" : "default" }}>
+            <div
+              ref={containerRef}
+              className="relative"
+              style={{ cursor: addMode ? "crosshair" : "default" }}
+              onClick={handleImageClick}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element -- locally-served map image, arbitrary user-upload dimensions */}
               <img
                 src={`/api/maps/${map.id}/image`}
                 alt={map.name}
-                onClick={handleImageClick}
                 onLoad={handleImageLoad}
                 className="max-w-none select-none"
                 draggable={false}
