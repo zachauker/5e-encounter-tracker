@@ -9,8 +9,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const map = await db.query.maps.findFirst({ where: eq(maps.id, id) });
   if (!map) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const buffer = await readMapImage(map.imagePath);
-  return new NextResponse(new Uint8Array(buffer), {
+  let buffer: Buffer;
+  try {
+    buffer = await readMapImage(map.imagePath);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    throw err;
+  }
+
+  return new NextResponse(buffer as unknown as ArrayBuffer, {
     headers: {
       "Content-Type": mapImageContentType(map.imagePath),
       "Cache-Control": "no-store",
