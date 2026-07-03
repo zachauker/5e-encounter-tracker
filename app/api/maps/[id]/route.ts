@@ -40,7 +40,17 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const existing = await db.query.maps.findFirst({ where: eq(maps.id, id) });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await db.delete(maps).where(eq(maps.id, id));
+  try {
+    await db.delete(maps).where(eq(maps.id, id));
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("FOREIGN KEY constraint failed")) {
+      return NextResponse.json(
+        { error: "This map is still referenced by a sub-map or marker. Remove those references first." },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
   await deleteMapImage(existing.imagePath);
 
   return NextResponse.json({ ok: true });
