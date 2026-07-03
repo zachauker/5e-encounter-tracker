@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { factions, characterFactions, characters } from "@/lib/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { factions, characterFactions, characters, mapMarkers, maps } from "@/lib/db/schema";
+import { eq, inArray, and } from "drizzle-orm";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,9 +18,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         })
       : [];
 
+  const markerLinks = await db.query.mapMarkers.findMany({
+    where: and(eq(mapMarkers.entityId, id), eq(mapMarkers.type, "faction")),
+  });
+  const resolvedMapMarkers = await Promise.all(
+    markerLinks.map(async (link) => {
+      const map = await db.query.maps.findFirst({ where: eq(maps.id, link.mapId) });
+      return { mapId: link.mapId, mapName: map?.name ?? "Unknown map", markerId: link.id };
+    })
+  );
+
   return NextResponse.json({
     ...row,
     linkedCharacters: linkedCharacters.map((c) => ({ id: c.id, name: c.name, type: c.type })),
+    mapMarkers: resolvedMapMarkers,
   });
 }
 
