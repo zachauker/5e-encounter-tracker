@@ -3,11 +3,17 @@ import { db } from "@/lib/db";
 import { mapMarkers } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
+const validTypes = ["location", "faction", "character", "submap", "note"];
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ markerId: string }> }) {
   const { markerId } = await params;
   const body = await req.json();
   const existing = await db.query.mapMarkers.findFirst({ where: eq(mapMarkers.id, markerId) });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (body.type !== undefined && !validTypes.includes(body.type)) {
+    return NextResponse.json({ error: `"type" must be one of ${validTypes.join(", ")}` }, { status: 400 });
+  }
 
   await db
     .update(mapMarkers)
