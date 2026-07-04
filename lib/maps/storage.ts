@@ -69,7 +69,11 @@ export async function saveTiledMapAssets(
   try {
     await sharp(buffer)
       .jpeg({ quality: 85 })
-      .tile({ size: TILE_SIZE, layout: "google" })
+      // Edge tiles (near-certain for any image whose dimensions aren't an
+      // exact multiple of TILE_SIZE) get padded to a full tile - sharp
+      // defaults that padding to opaque white, which stands out badly
+      // against this app's dark theme. Black blends in instead.
+      .tile({ size: TILE_SIZE, layout: "google", background: { r: 0, g: 0, b: 0 } })
       .toFile(tilesDir);
   } catch (err) {
     await fs.rm(mapDir, { recursive: true, force: true });
@@ -101,7 +105,11 @@ export async function readMapTile(mapId: string, z: string, x: string, y: string
     err.code = "ENOENT";
     throw err;
   }
-  return fs.readFile(path.join(MAPS_DIR, mapId, "tiles", z, x, `${y}.jpg`));
+  // sharp's `tile({ layout: "google" })` writes files as <z>/<row>/<col>.jpg
+  // (row = y, based on image height; col = x, based on image width) -
+  // the reverse of the usual XYZ convention where the first path segment
+  // is x. Confirmed empirically with a deliberately non-square test image.
+  return fs.readFile(path.join(MAPS_DIR, mapId, "tiles", z, y, `${x}.jpg`));
 }
 
 export async function deleteMapAssets(map: {
