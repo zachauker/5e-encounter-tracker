@@ -87,8 +87,20 @@ export async function saveTiledMapAssets(
   return { imagePath: `${mapId}/${originalFilename}`, width, height, maxZoom };
 }
 
-/** Throws ENOENT if the tile does not exist — callers must catch and handle it. */
+const NON_NEGATIVE_INT = /^\d+$/;
+
+/**
+ * Throws ENOENT if the tile does not exist, or if z/x/y are not bare
+ * non-negative integers — callers must catch and handle it. This also
+ * guards against path traversal, since z/x/y are interpolated directly
+ * into a filesystem path.
+ */
 export async function readMapTile(mapId: string, z: string, x: string, y: string): Promise<Buffer> {
+  if (!NON_NEGATIVE_INT.test(z) || !NON_NEGATIVE_INT.test(x) || !NON_NEGATIVE_INT.test(y)) {
+    const err = new Error("Invalid tile coordinates") as NodeJS.ErrnoException;
+    err.code = "ENOENT";
+    throw err;
+  }
   return fs.readFile(path.join(MAPS_DIR, mapId, "tiles", z, x, `${y}.jpg`));
 }
 
