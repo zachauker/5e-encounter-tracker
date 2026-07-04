@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { MapLibreMap, Marker, GeoJSONSource, type MapMouseEvent } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { Loader2 } from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TerraDraw, TerraDrawPolygonMode, TerraDrawLineStringMode, TerraDrawPointMode, TerraDrawRenderMode } from "terra-draw";
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
@@ -55,6 +56,7 @@ export function VectorMapCanvas({
   const drawRef = useRef<TerraDraw | null>(null);
   const [ready, setReady] = useState(false);
   const [zoom, setZoom] = useState<number | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
   const featureClickCallbackRef = useRef(onFeatureClick);
 
   const dims: MapDims = { width: map.width ?? 0, height: map.height ?? 0, maxZoom: map.maxZoom ?? 0 };
@@ -79,6 +81,11 @@ export function VectorMapCanvas({
       maxZoom: referenceZoom + (map.maxZoom ?? 0),
       renderWorldCopies: false,
       attributionControl: false,
+    });
+
+    glMap.on("error", (e) => {
+      console.error("MapLibre error:", e.error);
+      setMapError(e.error?.message ?? "Failed to load the map.");
     });
 
     glMap.on("load", () => {
@@ -284,6 +291,16 @@ export function VectorMapCanvas({
   return (
     <div className="absolute inset-0 overflow-hidden bg-black/40">
       <div ref={containerRef} className="w-full h-full" />
+      {!ready && !mapError && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {mapError && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <p className="text-sm text-destructive bg-card/90 border border-border rounded-md px-3 py-2">{mapError}</p>
+        </div>
+      )}
     </div>
   );
 }
