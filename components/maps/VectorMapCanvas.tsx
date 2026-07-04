@@ -69,6 +69,7 @@ export function VectorMapCanvas({
         maxzoom: referenceZoom + (map.maxZoom ?? 0),
       });
       glMap.addLayer({ id: "base-tiles-layer", type: "raster", source: "base-tiles" });
+      setZoom(glMap.getZoom());
       setReady(true);
     });
 
