@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -49,6 +49,29 @@ function ZoomReporter({ onZoomChange }: { onZoomChange?: (zoom: number) => void 
       onZoomChange?.(map.getZoom());
     },
   });
+  return null;
+}
+
+// react-leaflet's MapContainer only reads its options (including `dragging`)
+// once, at construction - passing dragging={!addMode} as a prop has no
+// effect after mount, since addMode always starts false. Toggling Leaflet's
+// own drag handler imperatively is required instead. This also matters for
+// more than cosmetics: Leaflet's Draggable module has a 3px clickTolerance
+// - any real mouse click that drifts more than 3px between mousedown and
+// mouseup gets classified as a micro-drag internally, which calls
+// preventDefault() and suppresses Leaflet's own semantic "click" event
+// (the one ClickHandler listens for) even though the raw DOM click still
+// fires. Disabling dragging entirely while placing a marker removes that
+// ambiguity, so clicks register reliably.
+function DragToggle({ addMode }: { addMode: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (addMode) {
+      map.dragging.disable();
+    } else {
+      map.dragging.enable();
+    }
+  }, [map, addMode]);
   return null;
 }
 
@@ -157,6 +180,7 @@ export function TiledMapCanvas({
         />
         <ClickHandler addMode={addMode} onImageClick={onImageClick} width={width} height={height} maxZoom={maxZoom} />
         <ZoomReporter onZoomChange={onZoomChange} />
+        <DragToggle addMode={addMode} />
         {markers.map((m) => (
           <MarkerWithReveal
             key={m.id}
