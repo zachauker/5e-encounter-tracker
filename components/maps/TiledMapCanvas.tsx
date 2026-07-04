@@ -81,12 +81,14 @@ function MarkerWithReveal({
     },
   });
 
+  const icon = useMemo(() => markerIcon(marker.type, selected), [marker.type, selected]);
+
   if (marker.minZoom !== null && zoom < marker.minZoom) return null;
 
   return (
     <Marker
       position={position}
-      icon={markerIcon(marker.type, selected)}
+      icon={icon}
       draggable
       eventHandlers={{
         click: () => onMarkerClick(marker),
