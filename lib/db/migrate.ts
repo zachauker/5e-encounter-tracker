@@ -179,6 +179,11 @@ export function runMigrations() {
   addColumnIfMissing("combatants", "ddb_character_data", "TEXT");
   addColumnIfMissing("combatants", "character_id", "TEXT");
   addColumnIfMissing("encounters", "campaign_id", "TEXT REFERENCES campaigns(id)");
+  addColumnIfMissing("maps", "render_mode", "TEXT NOT NULL DEFAULT 'static'");
+  addColumnIfMissing("maps", "width", "INTEGER");
+  addColumnIfMissing("maps", "height", "INTEGER");
+  addColumnIfMissing("maps", "max_zoom", "INTEGER");
+  addColumnIfMissing("map_markers", "min_zoom", "INTEGER");
 
   // Ensure a default campaign exists and every encounter references one.
   const existingCampaign = sqlite.prepare("SELECT id FROM campaigns LIMIT 1").get() as
