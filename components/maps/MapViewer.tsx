@@ -1,27 +1,20 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Plus, X, ChevronRight } from "lucide-react";
-import { MapMarkerPin } from "@/components/maps/MapMarkerPin";
-import { MarkerFormDialog, type MarkerData } from "@/components/maps/MarkerFormDialog";
+import { StaticMapCanvas } from "@/components/maps/StaticMapCanvas";
+import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { useCampaignStore } from "@/lib/store/campaign-store";
+import type { MapData, ResolvedMarker } from "@/components/maps/map-types";
 
-interface MapData {
-  id: string;
-  name: string;
-  imagePath: string;
-  parentMapId: string | null;
-  breadcrumb: { id: string; name: string }[];
-}
-
-interface ResolvedMarker extends MarkerData {
-  resolvedTitle: string;
-  resolvedSubtitle: string | null;
-}
+const TiledMapCanvas = dynamic(
+  () => import("@/components/maps/TiledMapCanvas").then((mod) => mod.TiledMapCanvas),
+  { ssr: false }
+);
 
 const ENTITY_PATH: Record<string, string> = { character: "characters", location: "locations", faction: "factions" };
 
@@ -42,23 +35,7 @@ export function MapViewer() {
   });
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
   const [editingMarker, setEditingMarker] = useState<ResolvedMarker | null>(null);
-  const [minScale, setMinScale] = useState(0.5);
-  const draggingRef = useRef<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewportRef = useRef<HTMLDivElement>(null);
-
-  function handleImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
-    const viewport = viewportRef.current;
-    const { naturalWidth, naturalHeight } = e.currentTarget;
-    if (!viewport || !naturalWidth || !naturalHeight) return;
-    const { width: viewportWidth, height: viewportHeight } = viewport.getBoundingClientRect();
-    const fitScale = Math.min(viewportWidth / naturalWidth, viewportHeight / naturalHeight);
-    // Never force small images to scale up as their own "minimum" (a fit
-    // scale > 1 would mean the image is smaller than the viewport), and
-    // never let it collapse to an unusable sliver for extreme aspect
-    // ratios or enormous source images.
-    setMinScale(Math.min(1, Math.max(0.05, fitScale)));
-  }
+  const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
 
   const loadMarkers = useCallback(async () => {
     const res = await fetch(`/api/maps/${id}/markers`);
@@ -83,18 +60,12 @@ export function MapViewer() {
     };
   }, [id, loadMarkers]);
 
-  function handleImageClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (!addMode) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    setPendingPosition({
-      x: (e.clientX - rect.left) / rect.width,
-      y: (e.clientY - rect.top) / rect.height,
-    });
+  function handleCanvasClick(pos: { x: number; y: number }) {
+    setPendingPosition(pos);
     setAddMode(false);
   }
 
   function handleMarkerClick(marker: ResolvedMarker) {
-    if (draggingRef.current) return;
     if (marker.type === "submap" && marker.targetMapId) {
       router.push(`/maps/${marker.targetMapId}`);
       return;
@@ -102,41 +73,16 @@ export function MapViewer() {
     setSelectedId(marker.id === selectedId ? null : marker.id);
   }
 
-  function startDrag(markerId: string, e: React.PointerEvent) {
-    e.stopPropagation();
-    draggingRef.current = markerId;
-    const container = containerRef.current;
-    if (!container) return;
+  function handleMarkerDragMove(markerId: string, pos: { x: number; y: number }) {
+    setMarkers((prev) => prev.map((m) => (m.id === markerId ? { ...m, ...pos } : m)));
+  }
 
-    function onMove(ev: PointerEvent) {
-      const rect = container!.getBoundingClientRect();
-      const x = Math.min(1, Math.max(0, (ev.clientX - rect.left) / rect.width));
-      const y = Math.min(1, Math.max(0, (ev.clientY - rect.top) / rect.height));
-      setMarkers((prev) => prev.map((m) => (m.id === markerId ? { ...m, x, y } : m)));
-    }
-    function cleanup() {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onCancel);
-      draggingRef.current = null;
-    }
-    async function onUp(ev: PointerEvent) {
-      cleanup();
-      const rect = container!.getBoundingClientRect();
-      const x = Math.min(1, Math.max(0, (ev.clientX - rect.left) / rect.width));
-      const y = Math.min(1, Math.max(0, (ev.clientY - rect.top) / rect.height));
-      await fetch(`/api/maps/markers/${markerId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ x, y }),
-      });
-    }
-    function onCancel() {
-      cleanup();
-    }
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onCancel);
+  function handleMarkerDragEnd(markerId: string, pos: { x: number; y: number }) {
+    fetch(`/api/maps/markers/${markerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(pos),
+    });
   }
 
   const selectedMarker = markers.find((m) => m.id === selectedId) ?? null;
@@ -157,6 +103,17 @@ export function MapViewer() {
       </div>
     );
   }
+
+  const canvasProps = {
+    map,
+    markers,
+    addMode,
+    selectedId,
+    onImageClick: handleCanvasClick,
+    onMarkerClick: handleMarkerClick,
+    onMarkerDragMove: handleMarkerDragMove,
+    onMarkerDragEnd: handleMarkerDragEnd,
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -187,43 +144,15 @@ export function MapViewer() {
         </Button>
       </div>
 
-      <div ref={viewportRef} className="relative flex-1 overflow-hidden bg-black/40">
-        <TransformWrapper disabled={addMode} doubleClick={{ disabled: true }} minScale={minScale} maxScale={6}>
-          <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-fit !h-fit">
-            <div
-              ref={containerRef}
-              className="relative"
-              style={{ cursor: addMode ? "crosshair" : "default" }}
-              onClick={handleImageClick}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- locally-served map image, arbitrary user-upload dimensions */}
-              <img
-                src={`/api/maps/${map.id}/image`}
-                alt={map.name}
-                onLoad={handleImageLoad}
-                className="max-w-none select-none"
-                draggable={false}
-              />
-              {markers.map((m) => (
-                <div
-                  key={m.id}
-                  className="absolute -translate-x-1/2 -translate-y-full cursor-pointer"
-                  style={{ left: `${m.x * 100}%`, top: `${m.y * 100}%` }}
-                  onPointerDown={(e) => startDrag(m.id, e)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMarkerClick(m);
-                  }}
-                >
-                  <MapMarkerPin type={m.type} selected={m.id === selectedId} />
-                </div>
-              ))}
-            </div>
-          </TransformComponent>
-        </TransformWrapper>
+      <div className="relative flex-1 overflow-hidden">
+        {map.renderMode === "tiled" ? (
+          <TiledMapCanvas {...canvasProps} onZoomChange={setViewZoom} />
+        ) : (
+          <StaticMapCanvas {...canvasProps} />
+        )}
 
         {selectedMarker && (
-          <div className="absolute top-4 left-4 w-64 rounded-lg border border-border bg-card p-3 shadow-xl space-y-2">
+          <div className="absolute top-4 left-4 w-64 rounded-lg border border-border bg-card p-3 shadow-xl space-y-2 z-[1000]">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <div className="font-medium text-sm">{selectedMarker.resolvedTitle}</div>
@@ -278,6 +207,7 @@ export function MapViewer() {
           campaignId={activeCampaignId ?? ""}
           position={pendingPosition}
           marker={editingMarker}
+          currentZoom={map.renderMode === "tiled" ? viewZoom : undefined}
           onClose={() => {
             setPendingPosition(null);
             setEditingMarker(null);
