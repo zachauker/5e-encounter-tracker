@@ -32,6 +32,7 @@ export interface VectorMapCanvasProps {
   onFeatureClick: (featureId: string) => void;
   drawMode: FeatureType | null;
   onFeatureDrawn: (type: FeatureType, geometry: GeoJSON.Geometry) => void;
+  onZoomChange?: (zoom: number) => void;
 }
 
 const TERRA_MODE_NAME: Record<FeatureType, string> = { region: "polygon", road: "linestring", label: "point" };
@@ -49,6 +50,7 @@ export function VectorMapCanvas({
   onFeatureClick,
   drawMode,
   onFeatureDrawn,
+  onZoomChange,
 }: VectorMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const glMapRef = useRef<MapLibreMap | null>(null);
@@ -59,6 +61,10 @@ export function VectorMapCanvas({
   const [zoom, setZoom] = useState<number | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const featureClickCallbackRef = useRef(onFeatureClick);
+  const onZoomChangeRef = useRef(onZoomChange);
+  useEffect(() => {
+    onZoomChangeRef.current = onZoomChange;
+  });
 
   const dims: MapDims = { width: map.width ?? 0, height: map.height ?? 0, maxZoom: map.maxZoom ?? 0 };
 
@@ -170,12 +176,16 @@ export function VectorMapCanvas({
       });
       drawRef.current = draw;
 
-      setZoom(glMap.getZoom());
+      const initialZoom = glMap.getZoom();
+      setZoom(initialZoom);
+      onZoomChangeRef.current?.(initialZoom);
       setReady(true);
     });
 
     glMap.on("zoomend", () => {
-      setZoom(glMap.getZoom());
+      const newZoom = glMap.getZoom();
+      setZoom(newZoom);
+      onZoomChangeRef.current?.(newZoom);
     });
 
     glMapRef.current = glMap;

@@ -233,6 +233,7 @@ export function MapViewer() {
             drawMode={drawMode}
             onFeatureClick={handleFeatureClick}
             onFeatureDrawn={handleFeatureDrawn}
+            onZoomChange={setViewZoom}
           />
         ) : map.renderMode === "tiled" ? (
           <TiledMapCanvas {...sharedCanvasProps} onZoomChange={setViewZoom} />
