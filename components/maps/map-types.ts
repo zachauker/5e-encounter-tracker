@@ -36,14 +36,29 @@ export interface LabelStyle {
   color: string;
 }
 
-export interface MapFeatureData {
+interface MapFeatureBase {
   id: string;
   mapId: string;
-  type: FeatureType;
   name: string | null;
   geometry: GeoJSON.Geometry;
-  style: RegionStyle | RoadStyle | LabelStyle;
 }
+
+export interface MapFeatureRegion extends MapFeatureBase {
+  type: "region";
+  style: RegionStyle;
+}
+
+export interface MapFeatureRoad extends MapFeatureBase {
+  type: "road";
+  style: RoadStyle;
+}
+
+export interface MapFeatureLabel extends MapFeatureBase {
+  type: "label";
+  style: LabelStyle;
+}
+
+export type MapFeatureData = MapFeatureRegion | MapFeatureRoad | MapFeatureLabel;
 
 export interface MapData {
   id: string;
