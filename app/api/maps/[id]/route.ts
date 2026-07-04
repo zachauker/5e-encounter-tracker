@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { maps } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { deleteMapImage } from "@/lib/maps/storage";
+import { deleteMapAssets } from "@/lib/maps/storage";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -51,7 +51,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     }
     throw err;
   }
-  await deleteMapImage(existing.imagePath);
+  await deleteMapAssets(existing);
 
   return NextResponse.json({ ok: true });
 }
