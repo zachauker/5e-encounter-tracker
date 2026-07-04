@@ -135,7 +135,7 @@ export function TiledMapCanvas({
   );
 
   return (
-    <div className="relative flex-1 overflow-hidden bg-black/40" style={{ cursor: addMode ? "crosshair" : "" }}>
+    <div className="absolute inset-0 overflow-hidden bg-black/40" style={{ cursor: addMode ? "crosshair" : "" }}>
       <MapContainer
         crs={CRS}
         bounds={bounds}
