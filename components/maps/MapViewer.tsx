@@ -37,6 +37,7 @@ export function MapViewer() {
   const [loading, setLoading] = useState(true);
   const [addMode, setAddMode] = useState(false);
   const [drawMode, setDrawMode] = useState<FeatureType | null>(null);
+  const [promoting, setPromoting] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     const match = window.location.hash.match(/^#marker-(.+)$/);
@@ -114,19 +115,31 @@ export function MapViewer() {
   }
 
   async function togglePromotion() {
-    if (!map) return;
+    if (!map || promoting) return;
     const confirmed = map.isWorldMap
       ? confirm("Remove this map as the campaign's World Map?")
       : confirm("Set this as the campaign's World Map? Any other World Map in this campaign will be unset.");
     if (!confirmed) return;
     const nextIsWorldMap = !map.isWorldMap;
-    await fetch(`/api/maps/${map.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isWorldMap: nextIsWorldMap }),
-    });
-    setMap({ ...map, isWorldMap: nextIsWorldMap });
-    if (nextIsWorldMap) await loadFeatures();
+    setPromoting(true);
+    try {
+      const res = await fetch(`/api/maps/${map.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isWorldMap: nextIsWorldMap }),
+      });
+      if (!res.ok) {
+        alert("Failed to update World Map status. Please try again.");
+        return;
+      }
+      // setMap and loadFeatures must stay sequential (not Promise.all) so
+      // VectorMapCanvas never mounts with isWorldMap true before features
+      // has had a chance to load.
+      setMap({ ...map, isWorldMap: nextIsWorldMap });
+      if (nextIsWorldMap) await loadFeatures();
+    } finally {
+      setPromoting(false);
+    }
   }
 
   const selectedMarker = markers.find((m) => m.id === selectedId) ?? null;
@@ -179,7 +192,7 @@ export function MapViewer() {
         </div>
         <div className="flex items-center gap-1.5 flex-none">
           {map.renderMode === "tiled" && map.parentMapId === null && (
-            <Button size="sm" variant="outline" onClick={togglePromotion}>
+            <Button size="sm" variant="outline" onClick={togglePromotion} disabled={promoting}>
               {map.isWorldMap ? "Remove World Map" : "Set as World Map"}
             </Button>
           )}
