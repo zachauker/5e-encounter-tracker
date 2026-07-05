@@ -8,22 +8,15 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Plus, X, ChevronRight } from "lucide-react";
 import { StaticMapCanvas } from "@/components/maps/StaticMapCanvas";
 import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
-import { FeatureFormDialog } from "@/components/maps/FeatureFormDialog";
 import { useCampaignStore } from "@/lib/store/campaign-store";
-import type { MapData, ResolvedMarker, MapFeatureData, FeatureType } from "@/components/maps/map-types";
+import type { MapData, ResolvedMarker } from "@/components/maps/map-types";
 
 const TiledMapCanvas = dynamic(
   () => import("@/components/maps/TiledMapCanvas").then((mod) => mod.TiledMapCanvas),
   { ssr: false }
 );
-const VectorMapCanvas = dynamic(
-  () => import("@/components/maps/VectorMapCanvas").then((mod) => mod.VectorMapCanvas),
-  { ssr: false }
-);
 
 const ENTITY_PATH: Record<string, string> = { character: "characters", location: "locations", faction: "factions" };
-
-const DRAW_MODE_LABEL: Record<FeatureType, string> = { region: "Draw Region", road: "Draw Road", label: "Place Label" };
 
 export function MapViewer() {
   const params = useParams();
@@ -33,11 +26,8 @@ export function MapViewer() {
 
   const [map, setMap] = useState<MapData | null>(null);
   const [markers, setMarkers] = useState<ResolvedMarker[]>([]);
-  const [features, setFeatures] = useState<MapFeatureData[]>([]);
   const [loading, setLoading] = useState(true);
   const [addMode, setAddMode] = useState(false);
-  const [drawMode, setDrawMode] = useState<FeatureType | null>(null);
-  const [promoting, setPromoting] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     const match = window.location.hash.match(/^#marker-(.+)$/);
@@ -45,18 +35,11 @@ export function MapViewer() {
   });
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
   const [editingMarker, setEditingMarker] = useState<ResolvedMarker | null>(null);
-  const [pendingFeature, setPendingFeature] = useState<{ type: FeatureType; geometry: GeoJSON.Geometry } | null>(null);
-  const [editingFeature, setEditingFeature] = useState<MapFeatureData | null>(null);
   const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
 
   const loadMarkers = useCallback(async () => {
     const res = await fetch(`/api/maps/${id}/markers`);
     if (res.ok) setMarkers(await res.json());
-  }, [id]);
-
-  const loadFeatures = useCallback(async () => {
-    const res = await fetch(`/api/maps/${id}/features`);
-    if (res.ok) setFeatures(await res.json());
   }, [id]);
 
   useEffect(() => {
@@ -68,7 +51,6 @@ export function MapViewer() {
         if (cancelled) return;
         const mapData: MapData | null = mapRes.ok ? await mapRes.json() : null;
         setMap(mapData);
-        if (mapData?.isWorldMap) await loadFeatures();
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -77,7 +59,7 @@ export function MapViewer() {
     return () => {
       cancelled = true;
     };
-  }, [id, loadMarkers, loadFeatures]);
+  }, [id, loadMarkers]);
 
   function handleCanvasClick(pos: { x: number; y: number }) {
     setPendingPosition(pos);
@@ -102,44 +84,6 @@ export function MapViewer() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(pos),
     });
-  }
-
-  function handleFeatureClick(featureId: string) {
-    const feature = features.find((f) => f.id === featureId);
-    if (feature) setEditingFeature(feature);
-  }
-
-  function handleFeatureDrawn(type: FeatureType, geometry: GeoJSON.Geometry) {
-    setPendingFeature({ type, geometry });
-    setDrawMode(null);
-  }
-
-  async function togglePromotion() {
-    if (!map || promoting) return;
-    const confirmed = map.isWorldMap
-      ? confirm("Remove this map as the campaign's World Map?")
-      : confirm("Set this as the campaign's World Map? Any other World Map in this campaign will be unset.");
-    if (!confirmed) return;
-    const nextIsWorldMap = !map.isWorldMap;
-    setPromoting(true);
-    try {
-      const res = await fetch(`/api/maps/${map.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isWorldMap: nextIsWorldMap }),
-      });
-      if (!res.ok) {
-        alert("Failed to update World Map status. Please try again.");
-        return;
-      }
-      // setMap and loadFeatures must stay sequential (not Promise.all) so
-      // VectorMapCanvas never mounts with isWorldMap true before features
-      // has had a chance to load.
-      setMap({ ...map, isWorldMap: nextIsWorldMap });
-      if (nextIsWorldMap) await loadFeatures();
-    } finally {
-      setPromoting(false);
-    }
   }
 
   const selectedMarker = markers.find((m) => m.id === selectedId) ?? null;
@@ -191,32 +135,10 @@ export function MapViewer() {
           <span className="font-medium truncate">{map.name}</span>
         </div>
         <div className="flex items-center gap-1.5 flex-none">
-          {map.renderMode === "tiled" && map.parentMapId === null && (
-            <Button size="sm" variant="outline" onClick={togglePromotion} disabled={promoting}>
-              {map.isWorldMap ? "Remove World Map" : "Set as World Map"}
-            </Button>
-          )}
-          {map.isWorldMap &&
-            (["region", "road", "label"] as const).map((t) => (
-              <Button
-                key={t}
-                size="sm"
-                variant={drawMode === t ? "initiative" : "outline"}
-                onClick={() => {
-                  setDrawMode((cur) => (cur === t ? null : t));
-                  setAddMode(false);
-                }}
-              >
-                {DRAW_MODE_LABEL[t]}
-              </Button>
-            ))}
           <Button
             size="sm"
             variant={addMode ? "initiative" : "outline"}
-            onClick={() => {
-              setAddMode((v) => !v);
-              setDrawMode(null);
-            }}
+            onClick={() => setAddMode((v) => !v)}
             className="gap-1.5"
           >
             {addMode ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
@@ -226,16 +148,7 @@ export function MapViewer() {
       </div>
 
       <div className="relative flex-1 overflow-hidden">
-        {map.isWorldMap ? (
-          <VectorMapCanvas
-            {...sharedCanvasProps}
-            features={features}
-            drawMode={drawMode}
-            onFeatureClick={handleFeatureClick}
-            onFeatureDrawn={handleFeatureDrawn}
-            onZoomChange={setViewZoom}
-          />
-        ) : map.renderMode === "tiled" ? (
+        {map.renderMode === "tiled" ? (
           <TiledMapCanvas {...sharedCanvasProps} onZoomChange={setViewZoom} />
         ) : (
           <StaticMapCanvas {...sharedCanvasProps} />
@@ -306,28 +219,6 @@ export function MapViewer() {
             setPendingPosition(null);
             setEditingMarker(null);
             loadMarkers();
-          }}
-        />
-      )}
-
-      {(pendingFeature || editingFeature) && (
-        <FeatureFormDialog
-          mapId={map.id}
-          type={pendingFeature?.type ?? editingFeature!.type}
-          geometry={pendingFeature?.geometry ?? null}
-          feature={editingFeature}
-          onClose={() => {
-            setPendingFeature(null);
-            setEditingFeature(null);
-          }}
-          onSaved={() => {
-            setPendingFeature(null);
-            setEditingFeature(null);
-            loadFeatures();
-          }}
-          onDeleted={() => {
-            setEditingFeature(null);
-            loadFeatures();
           }}
         />
       )}
