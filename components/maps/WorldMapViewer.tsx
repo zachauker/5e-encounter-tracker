@@ -1,0 +1,211 @@
+"use client";
+
+import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import { Loader2, Plus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
+import { useCampaignStore } from "@/lib/store/campaign-store";
+import type { ResolvedMarker } from "@/components/maps/map-types";
+
+const WorldMapCanvas = dynamic(
+  () => import("@/components/maps/WorldMapCanvas").then((m) => m.WorldMapCanvas),
+  { ssr: false }
+);
+
+const ENTITY_PATH: Record<string, string> = { character: "characters", location: "locations", faction: "factions" };
+const THEME_KEY = "worldMapTheme";
+
+interface ThemeOption {
+  id: string;
+  label: string;
+}
+
+export function WorldMapViewer() {
+  const { activeCampaignId } = useCampaignStore();
+  const [worldMapId, setWorldMapId] = useState<string | null>(null);
+  const [markers, setMarkers] = useState<ResolvedMarker[]>([]);
+  const [themes, setThemes] = useState<ThemeOption[]>([]);
+  const [theme, setTheme] = useState<string>("classic");
+  const [loading, setLoading] = useState(true);
+  const [addMode, setAddMode] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ x: number; y: number } | null>(null);
+  const [editing, setEditing] = useState<ResolvedMarker | null>(null);
+  const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
+
+  const loadMarkers = useCallback(async (mapId: string) => {
+    const res = await fetch(`/api/maps/${mapId}/markers`);
+    if (res.ok) setMarkers(await res.json());
+  }, []);
+
+  // Theme list + persisted choice.
+  useEffect(() => {
+    fetch("/api/world/styles/themes.json")
+      .then((r) => (r.ok ? r.json() : { themes: [] }))
+      .then((d: { themes: ThemeOption[] }) => setThemes(d.themes));
+    const saved = typeof window !== "undefined" ? window.localStorage.getItem(THEME_KEY) : null;
+    if (saved) setTheme(saved);
+  }, []);
+
+  // Get-or-create the world map for the active campaign, then load markers.
+  useEffect(() => {
+    if (!activeCampaignId) return;
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/world?campaignId=${activeCampaignId}`)
+      .then((r) => r.json())
+      .then(async (map: { id: string }) => {
+        if (cancelled) return;
+        setWorldMapId(map.id);
+        await loadMarkers(map.id);
+      })
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCampaignId, loadMarkers]);
+
+  function changeTheme(id: string) {
+    setTheme(id);
+    window.localStorage.setItem(THEME_KEY, id);
+  }
+
+  function handleMapClick(lngLat: { lng: number; lat: number }) {
+    setPending({ x: lngLat.lng, y: lngLat.lat });
+    setAddMode(false);
+  }
+
+  function handleMarkerDragEnd(markerId: string, lngLat: { lng: number; lat: number }) {
+    setMarkers((prev) => prev.map((m) => (m.id === markerId ? { ...m, x: lngLat.lng, y: lngLat.lat } : m)));
+    fetch(`/api/maps/markers/${markerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ x: lngLat.lng, y: lngLat.lat }),
+    });
+  }
+
+  const selectedMarker = markers.find((m) => m.id === selectedId) ?? null;
+
+  if (!activeCampaignId) {
+    return <div className="flex items-center justify-center h-full text-muted-foreground">Select a campaign first.</div>;
+  }
+  if (loading || !worldMapId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border flex-none">
+        <span className="font-medium text-sm">Exandria — World Map</span>
+        <div className="flex items-center gap-2 flex-none">
+          <select
+            value={theme}
+            onChange={(e) => changeTheme(e.target.value)}
+            className="text-xs bg-muted border border-border rounded-md px-2 py-1"
+            title="Map theme"
+          >
+            {themes.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            variant={addMode ? "initiative" : "outline"}
+            onClick={() => setAddMode((v) => !v)}
+            className="gap-1.5"
+          >
+            {addMode ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+            {addMode ? "Cancel" : "Add Marker"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="relative flex-1 overflow-hidden">
+        <WorldMapCanvas
+          theme={theme}
+          markers={markers}
+          selectedId={selectedId}
+          addMode={addMode}
+          onMapClick={handleMapClick}
+          onMarkerClick={(m) => setSelectedId(m.id === selectedId ? null : m.id)}
+          onMarkerDragEnd={handleMarkerDragEnd}
+          onZoomChange={setViewZoom}
+        />
+
+        {selectedMarker && (
+          <div className="absolute top-4 left-4 w-64 rounded-lg border border-border bg-card p-3 shadow-xl space-y-2 z-[1000]">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="font-medium text-sm">{selectedMarker.resolvedTitle}</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">{selectedMarker.type}</div>
+              </div>
+              <button onClick={() => setSelectedId(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            {selectedMarker.type === "note" && selectedMarker.note && (
+              <p className="text-sm text-muted-foreground">{selectedMarker.note}</p>
+            )}
+            {selectedMarker.resolvedSubtitle && <p className="text-xs text-destructive">{selectedMarker.resolvedSubtitle}</p>}
+            <div className="flex gap-2 pt-1">
+              {ENTITY_PATH[selectedMarker.type] && selectedMarker.entityId && (
+                <Link
+                  href={`/${ENTITY_PATH[selectedMarker.type]}/${selectedMarker.entityId}`}
+                  className="text-xs text-primary hover:underline"
+                >
+                  View {selectedMarker.type} →
+                </Link>
+              )}
+              <button
+                onClick={() => {
+                  setEditing(selectedMarker);
+                  setSelectedId(null);
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Edit
+              </button>
+              <button
+                onClick={async () => {
+                  await fetch(`/api/maps/markers/${selectedMarker.id}`, { method: "DELETE" });
+                  setSelectedId(null);
+                  loadMarkers(worldMapId);
+                }}
+                className="text-xs text-destructive hover:underline"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {(pending || editing) && (
+        <MarkerFormDialog
+          mapId={worldMapId}
+          campaignId={activeCampaignId}
+          position={pending}
+          marker={editing}
+          currentZoom={viewZoom}
+          onClose={() => {
+            setPending(null);
+            setEditing(null);
+          }}
+          onSaved={() => {
+            setPending(null);
+            setEditing(null);
+            loadMarkers(worldMapId);
+          }}
+        />
+      )}
+    </div>
+  );
+}
