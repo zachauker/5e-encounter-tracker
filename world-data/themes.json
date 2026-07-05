@@ -1,0 +1,57 @@
+{
+  "themes": [
+    {
+      "id": "classic",
+      "label": "Classic Atlas",
+      "default": true,
+      "overrides": {}
+    },
+    {
+      "id": "vibrant",
+      "label": "Vibrant Painted",
+      "overrides": {
+        "sea": { "background-color": "#5f9fc4" },
+        "bathymetry": { "fill-color": "#4585ab", "fill-opacity": 0.6 },
+        "land": { "fill-color": "#ecdcae" },
+        "landcover": { "fill-opacity": 0.92 },
+        "inland-water": { "fill-color": "#5f9fc4" },
+        "coastline": { "line-color": "#6b5836", "line-width": 1.5 },
+        "roads": { "line-color": "#6a4a26" },
+        "city-labels": { "text-color": "#241d10", "text-halo-color": "#f4eeda" },
+        "region-labels": { "text-color": "#43391f", "text-halo-color": "#ecdcae" }
+      }
+    },
+    {
+      "id": "antique",
+      "label": "Antique Sepia",
+      "overrides": {
+        "sea": { "background-color": "#cdbb91" },
+        "bathymetry": { "fill-color": "#c2af84", "fill-opacity": 0.5 },
+        "land": { "fill-color": "#e7d8b0" },
+        "landcover": { "fill-opacity": 0.22 },
+        "inland-water": { "fill-color": "#c9b98f" },
+        "coastline": { "line-color": "#7a6641", "line-width": 1.3 },
+        "roads": { "line-color": "#7a6641" },
+        "city-dots": { "circle-color": "#4a3a22", "circle-stroke-color": "#e7d8b0" },
+        "city-labels": { "text-color": "#4a3a22", "text-halo-color": "#e7d8b0" },
+        "region-labels": { "text-color": "#6b5836", "text-halo-color": "#e7d8b0" }
+      }
+    },
+    {
+      "id": "dark",
+      "label": "Dark / Night",
+      "overrides": {
+        "sea": { "background-color": "#142430" },
+        "bathymetry": { "fill-color": "#1b2f3d", "fill-opacity": 0.6 },
+        "land": { "fill-color": "#2b3a33" },
+        "landcover": { "fill-opacity": 0.35 },
+        "inland-water": { "fill-color": "#142430" },
+        "coastline": { "line-color": "#61806e", "line-width": 1.2 },
+        "roads": { "line-color": "#8a785a" },
+        "city-dots": { "circle-color": "#e8e2d4", "circle-stroke-color": "#142430" },
+        "city-labels": { "text-color": "#ece6d8", "text-halo-color": "#0d1720" },
+        "region-labels": { "text-color": "#c9bda2", "text-halo-color": "#0d1720" }
+      }
+    }
+  ]
+}
