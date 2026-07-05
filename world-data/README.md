@@ -117,3 +117,12 @@ Contract the in-app viewer consumes:
   In-app theme switch = `map.setStyle(styles/<id>.json)` with the pmtiles source
   `url` and `glyphs` rewritten to the app's serving routes (the preview shows the
   exact fixup). Map init: `center [11.806, 5.193]`, `minZoom 3`, `maxZoom 12`.
+
+## Serving in the app (Plan 2)
+
+The app serves the artifacts from `WORLD_DIR`:
+- **Dev:** defaults to `world-data/build` (no copy needed after running the build scripts).
+- **Prod:** set `WORLD_DATA_DIR=/data/world` and run `scripts/world/deploy-to-data.sh`
+  on the host to copy `exandria.pmtiles` + `glyphs/` + `styles/` onto the mounted
+  `/data` volume. `tippecanoe`/`fontnik` are NOT needed in the production image —
+  only the generated files are.
