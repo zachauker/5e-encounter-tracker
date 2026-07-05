@@ -24,7 +24,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const resolvedMapMarkers = await Promise.all(
     markerLinks.map(async (link) => {
       const map = await db.query.maps.findFirst({ where: eq(maps.id, link.mapId) });
-      return { mapId: link.mapId, mapName: map?.name ?? "Unknown map", markerId: link.id };
+      return {
+        mapId: link.mapId,
+        mapName: map?.name ?? "Unknown map",
+        markerId: link.id,
+        renderMode: map?.renderMode ?? "static",
+      };
     })
   );
 
