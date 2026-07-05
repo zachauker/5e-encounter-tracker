@@ -56,3 +56,12 @@ contracts the styling task must use — do not assume standard field names.
 - **Coordinates**: sample from `wildemount_land.geojson` —
   `[[[[8.393082070171202,-4.276174672842822],[8.39720300807872,...` — small
   signed decimals, confirming lng/lat (EPSG:4326), no reprojection needed.
+
+## Artifact sizes
+
+- `build/exandria.pmtiles`: **14M** (13,963,980 bytes), built by
+  `scripts/world/build-tiles.sh` (tippecanoe v2.79.0, `-Z0 -z12`). Contains
+  all 8 source-layers (`land`, `bathymetry`, `inland_water`, `landcover`,
+  `roads`, `cities`, `pois`, `labels`), each merging Wildemount + Tal'Dorei.
+  Plan 2 should size its serving mechanism (static file vs. range-request
+  server) around this figure.
