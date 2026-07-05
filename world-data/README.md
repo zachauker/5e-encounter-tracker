@@ -95,3 +95,25 @@ in-app theme switcher uses the same mechanism, defaulting to `classic`.
 Verified in-browser (Plan 1): all four themes render correctly and the live
 toggle works with no console errors, at both overview and deep (z12) zoom with
 crisp vector labels.
+
+## Reproducibility
+
+Verified: deleting `world-data/src` and `world-data/build` entirely and re-running
+`fetch-geojson.sh` → `build-tiles.sh` → `build-glyphs.js` → `build-themes.js` from
+a clean tree reproduces all artifacts (14M `exandria.pmtiles`, 3 glyph stacks, 4
+theme styles) and the map still renders correctly. Nothing depends on
+hand-massaged intermediate state.
+
+## Handoff to Plan 2 (app integration)
+
+Contract the in-app viewer consumes:
+- **Tiles:** `build/exandria.pmtiles` (14M), source-layers `land`, `bathymetry`,
+  `inland_water`, `landcover`, `roads`, `cities`, `pois`, `labels`. Serve with
+  HTTP Range support (single static file, ~14M — bundling in `public/` is viable).
+- **Glyphs:** `build/glyphs/<fontstack>/<range>.pbf`, fontstacks
+  `Noto Sans Regular`, `Noto Sans Bold`, `Noto Serif Italic`.
+- **Styles + themes:** `build/styles/<id>.json` (complete MapLibre styles) and
+  `build/styles/themes.json` (`{id,label,default}`). Default theme `classic`.
+  In-app theme switch = `map.setStyle(styles/<id>.json)` with the pmtiles source
+  `url` and `glyphs` rewritten to the app's serving routes (the preview shows the
+  exact fixup). Map init: `center [11.806, 5.193]`, `minZoom 3`, `maxZoom 12`.
