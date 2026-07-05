@@ -29,6 +29,7 @@ export function WorldMapViewer() {
   const [themes, setThemes] = useState<ThemeOption[]>([]);
   const [theme, setTheme] = useState<string>("classic");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [addMode, setAddMode] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pending, setPending] = useState<{ x: number; y: number } | null>(null);
@@ -54,12 +55,22 @@ export function WorldMapViewer() {
     if (!activeCampaignId) return;
     let cancelled = false;
     setLoading(true);
+    setLoadError(false);
     fetch(`/api/world?campaignId=${activeCampaignId}`)
-      .then((r) => r.json())
-      .then(async (map: { id: string }) => {
-        if (cancelled) return;
+      .then(async (r) => {
+        if (!r.ok) {
+          if (!cancelled) setLoadError(true);
+          return null;
+        }
+        return r.json();
+      })
+      .then(async (map: { id: string } | null) => {
+        if (cancelled || !map) return;
         setWorldMapId(map.id);
         await loadMarkers(map.id);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -90,6 +101,13 @@ export function WorldMapViewer() {
 
   if (!activeCampaignId) {
     return <div className="flex items-center justify-center h-full text-muted-foreground">Select a campaign first.</div>;
+  }
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        Couldn&apos;t load the world map for this campaign.
+      </div>
+    );
   }
   if (loading || !worldMapId) {
     return (

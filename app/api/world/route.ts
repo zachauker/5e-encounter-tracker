@@ -18,18 +18,25 @@ export async function GET(req: Request) {
   if (existing) return NextResponse.json(existing);
 
   const now = new Date();
-  const [created] = await db
-    .insert(maps)
-    .values({
-      id: generateId(),
-      campaignId,
-      name: "Exandria",
-      imagePath: "world", // no uploaded image; column is NOT NULL, so a sentinel
-      parentMapId: null,
-      renderMode: "world",
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
-  return NextResponse.json(created);
+  try {
+    const [created] = await db
+      .insert(maps)
+      .values({
+        id: generateId(),
+        campaignId,
+        name: "Exandria",
+        imagePath: "world", // no uploaded image; column is NOT NULL, so a sentinel
+        parentMapId: null,
+        renderMode: "world",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    return NextResponse.json(created);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("FOREIGN KEY constraint failed")) {
+      return NextResponse.json({ error: "Unknown campaign" }, { status: 400 });
+    }
+    throw err;
+  }
 }
