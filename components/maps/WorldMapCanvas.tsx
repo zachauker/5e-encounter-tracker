@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { MapLibreMap, addProtocol, type MapMouseEvent, type StyleSpecification } from "maplibre-gl";
+import { MapLibreMap, Marker, addProtocol, type MapMouseEvent, type StyleSpecification } from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Loader2 } from "lucide-react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MapMarkerPin } from "@/components/maps/MapMarkerPin";
+import type { ResolvedMarker } from "@/components/maps/map-types";
 
 // Register the pmtiles:// protocol once for the whole app. The Protocol instance
 // is module-level so it (and its tile cache) persists for the app's lifetime.
@@ -26,6 +29,10 @@ export interface WorldMapCanvasProps {
   onMapClick: (lngLat: { lng: number; lat: number }) => void;
   onReady?: (map: MapLibreMap) => void;
   onZoomChange?: (zoom: number) => void;
+  markers: ResolvedMarker[];
+  selectedId: string | null;
+  onMarkerClick: (marker: ResolvedMarker) => void;
+  onMarkerDragEnd: (markerId: string, lngLat: { lng: number; lat: number }) => void;
 }
 
 // Point a fetched theme style at the app's world-asset routes.
@@ -42,12 +49,28 @@ async function loadThemeStyle(theme: string, origin: string): Promise<StyleSpeci
   return fixupStyle(await res.json(), origin);
 }
 
-export function WorldMapCanvas({ theme, addMode, onMapClick, onReady, onZoomChange }: WorldMapCanvasProps) {
+export function WorldMapCanvas({
+  theme,
+  addMode,
+  onMapClick,
+  onReady,
+  onZoomChange,
+  markers,
+  selectedId,
+  onMarkerClick,
+  onMarkerDragEnd,
+}: WorldMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const glMapRef = useRef<MapLibreMap | null>(null);
   const readyRef = useRef(false);
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const markerInstancesRef = useRef<Map<string, Marker>>(new Map());
+  const [zoom, setZoom] = useState<number>(WORLD_MIN_ZOOM);
+  const markerCbRef = useRef({ onMarkerClick, onMarkerDragEnd });
+  useEffect(() => {
+    markerCbRef.current = { onMarkerClick, onMarkerDragEnd };
+  });
 
   const cbRef = useRef({ addMode, onMapClick, onReady, onZoomChange });
   useEffect(() => {
@@ -83,9 +106,13 @@ export function WorldMapCanvas({ theme, addMode, onMapClick, onReady, onZoomChan
         glMap.on("click", (e: MapMouseEvent) => {
           if (cbRef.current.addMode) cbRef.current.onMapClick(e.lngLat);
         });
-        glMap.on("zoomend", () => cbRef.current.onZoomChange?.(glMap!.getZoom()));
+        glMap.on("zoomend", () => {
+          setZoom(glMap!.getZoom());
+          cbRef.current.onZoomChange?.(glMap!.getZoom());
+        });
         glMap.on("load", () => {
           setReady(true);
+          setZoom(glMap!.getZoom());
           cbRef.current.onZoomChange?.(glMap!.getZoom());
           cbRef.current.onReady?.(glMap!);
         });
@@ -97,6 +124,8 @@ export function WorldMapCanvas({ theme, addMode, onMapClick, onReady, onZoomChan
 
     return () => {
       cancelled = true;
+      for (const inst of markerInstancesRef.current.values()) inst.remove();
+      markerInstancesRef.current.clear();
       glMap?.remove();
       glMapRef.current = null;
       setReady(false);
@@ -128,6 +157,45 @@ export function WorldMapCanvas({ theme, addMode, onMapClick, onReady, onZoomChan
       cancelled = true;
     };
   }, [theme, ready]);
+
+  useEffect(() => {
+    const glMap = glMapRef.current;
+    if (!glMap || !ready) return;
+    const instances = markerInstancesRef.current;
+    const visible = markers.filter((m) => m.minZoom === null || zoom >= m.minZoom);
+    const seen = new Set(visible.map((m) => m.id));
+
+    for (const [id, inst] of instances) {
+      if (!seen.has(id)) {
+        inst.remove();
+        instances.delete(id);
+      }
+    }
+
+    for (const marker of visible) {
+      const lngLat: [number, number] = [marker.x, marker.y]; // x=lng, y=lat for world maps
+      let inst = instances.get(marker.id);
+      if (!inst) {
+        const el = document.createElement("div");
+        el.innerHTML = renderToStaticMarkup(<MapMarkerPin type={marker.type} selected={marker.id === selectedId} />);
+        el.addEventListener("click", (evt) => {
+          evt.stopPropagation();
+          markerCbRef.current.onMarkerClick(marker);
+        });
+        inst = new Marker({ element: el, draggable: true, anchor: "bottom" }).setLngLat(lngLat).addTo(glMap);
+        inst.on("dragend", () => {
+          const { lng, lat } = inst!.getLngLat();
+          markerCbRef.current.onMarkerDragEnd(marker.id, { lng, lat });
+        });
+        instances.set(marker.id, inst);
+      } else {
+        inst.setLngLat(lngLat);
+        inst.getElement().innerHTML = renderToStaticMarkup(
+          <MapMarkerPin type={marker.type} selected={marker.id === selectedId} />
+        );
+      }
+    }
+  }, [markers, selectedId, ready, zoom]);
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-black/40">
