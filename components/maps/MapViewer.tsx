@@ -10,6 +10,8 @@ import { StaticMapCanvas } from "@/components/maps/StaticMapCanvas";
 import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { useCampaignStore } from "@/lib/store/campaign-store";
 import type { MapData, ResolvedMarker } from "@/components/maps/map-types";
+import { MarkerLayerControl } from "@/components/maps/MarkerLayerControl";
+import { isMarkerVisible } from "@/components/maps/marker-layers";
 
 const TiledMapCanvas = dynamic(
   () => import("@/components/maps/TiledMapCanvas").then((mod) => mod.TiledMapCanvas),
@@ -36,6 +38,25 @@ export function MapViewer() {
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
   const [editingMarker, setEditingMarker] = useState<ResolvedMarker | null>(null);
   const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
+
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(`markerLayers:${id}`);
+    if (raw) {
+      try {
+        setHidden(new Set(JSON.parse(raw) as string[]));
+      } catch {
+        // ignore malformed storage
+      }
+    }
+  }, [id]);
+
+  function updateHidden(next: Set<string>) {
+    setHidden(next);
+    window.localStorage.setItem(`markerLayers:${id}`, JSON.stringify([...next]));
+  }
 
   const loadMarkers = useCallback(async () => {
     const res = await fetch(`/api/maps/${id}/markers`);
@@ -107,7 +128,7 @@ export function MapViewer() {
 
   const sharedCanvasProps = {
     map,
-    markers,
+    markers: markers.filter((m) => isMarkerVisible(m, hidden)),
     addMode,
     selectedId,
     onImageClick: handleCanvasClick,
@@ -135,6 +156,7 @@ export function MapViewer() {
           <span className="font-medium truncate">{map.name}</span>
         </div>
         <div className="flex items-center gap-1.5 flex-none">
+          <MarkerLayerControl markers={markers} hidden={hidden} onChange={updateHidden} />
           <Button
             size="sm"
             variant={addMode ? "initiative" : "outline"}
