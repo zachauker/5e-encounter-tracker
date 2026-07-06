@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, Plus, X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { useCampaignStore } from "@/lib/store/campaign-store";
@@ -42,6 +42,7 @@ export function WorldMapViewer() {
   const [editing, setEditing] = useState<ResolvedMarker | null>(null);
   const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState(false);
 
   // Load persisted hidden layers once the world map id is known.
   useEffect(() => {
@@ -67,6 +68,27 @@ export function WorldMapViewer() {
     const res = await fetch(`/api/maps/${mapId}/markers`);
     if (res.ok) setMarkers(await res.json());
   }, []);
+
+  async function importLocations() {
+    if (!activeCampaignId || !worldMapId || importing) return;
+    setImporting(true);
+    try {
+      const res = await fetch("/api/world/import-locations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId: activeCampaignId }),
+      });
+      if (!res.ok) {
+        alert("Import failed. Please try again.");
+        return;
+      }
+      const d = (await res.json()) as { locationsCreated: number; locationsExisting: number };
+      await loadMarkers(worldMapId);
+      alert(`Imported ${d.locationsCreated} Exandria locations (${d.locationsExisting} already present).`);
+    } finally {
+      setImporting(false);
+    }
+  }
 
   // Theme list + persisted choice.
   useEffect(() => {
@@ -149,6 +171,12 @@ export function WorldMapViewer() {
       <div className="flex items-center justify-between px-6 py-3 border-b border-border flex-none">
         <span className="font-medium text-sm">Exandria — World Map</span>
         <div className="flex items-center gap-2 flex-none">
+          {markers.length === 0 && (
+            <Button size="sm" variant="outline" className="gap-1.5" disabled={importing} onClick={importLocations}>
+              <Download className="w-3.5 h-3.5" />
+              {importing ? "Importing…" : "Import Exandria locations"}
+            </Button>
+          )}
           <MarkerLayerControl markers={markers} hidden={hidden} onChange={updateHidden} />
           <select
             value={theme}
