@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -102,9 +103,14 @@ export default function EncountersPage() {
             return (
               <div
                 key={enc.id}
-                onClick={() => router.push(`/encounters/${enc.id}`)}
-                className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/30 transition-colors cursor-pointer group"
+                className="relative flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/30 transition-colors group"
               >
+                {/* Stretched link makes the whole row a keyboard-focusable nav target */}
+                <Link
+                  href={`/encounters/${enc.id}`}
+                  aria-label={`Open encounter: ${enc.name}`}
+                  className="absolute inset-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                />
                 <div
                   className={cn(
                     "w-10 h-10 rounded-lg border flex items-center justify-center flex-none",
@@ -143,7 +149,8 @@ export default function EncountersPage() {
                   <Button
                     size="icon-sm"
                     variant="ghost"
-                    className="opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+                    aria-label={`Delete encounter: ${enc.name}`}
+                    className="relative z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-destructive hover:text-destructive"
                     onClick={(e) => deleteEncounter(enc.id, e)}
                   >
                     <Trash2 className="w-3.5 h-3.5" />

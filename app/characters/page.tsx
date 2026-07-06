@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,6 @@ import { CharacterFormDialog } from "@/components/entities/CharacterFormDialog";
 import type { Character } from "@/lib/db/schema";
 
 export default function CharactersPage() {
-  const router = useRouter();
   const { activeCampaignId } = useCampaignStore();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [query, setQuery] = useState("");
@@ -59,9 +58,14 @@ export default function CharactersPage() {
         {filtered.map((c) => (
           <div
             key={c.id}
-            onClick={() => router.push(`/characters/${c.id}`)}
-            className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/30 transition-colors cursor-pointer group"
+            className="relative flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/30 transition-colors group"
           >
+            {/* Stretched link makes the whole row a keyboard-focusable nav target */}
+            <Link
+              href={`/characters/${c.id}`}
+              aria-label={`Open character: ${c.name}`}
+              className="absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+            />
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm">{c.name}</p>
             </div>
@@ -71,7 +75,8 @@ export default function CharactersPage() {
             <Button
               size="icon-sm"
               variant="ghost"
-              className="opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+              aria-label={`Delete character: ${c.name}`}
+              className="relative z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-destructive hover:text-destructive"
               onClick={(e) => remove(c.id, e)}
             >
               <Trash2 className="w-3.5 h-3.5" />

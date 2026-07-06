@@ -11,7 +11,7 @@ import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { useCampaignStore } from "@/lib/store/campaign-store";
 import type { MapData, ResolvedMarker } from "@/components/maps/map-types";
 import { MarkerLayerControl } from "@/components/maps/MarkerLayerControl";
-import { isMarkerVisible } from "@/components/maps/marker-layers";
+import { isMarkerVisible, readHiddenLayers } from "@/components/maps/marker-layers";
 
 const TiledMapCanvas = dynamic(
   () => import("@/components/maps/TiledMapCanvas").then((mod) => mod.TiledMapCanvas),
@@ -44,19 +44,14 @@ export function MapViewer() {
   // local state live, so the pre-drag position must be captured on first move).
   const dragOriginRef = useRef<{ id: string; x: number; y: number } | null>(null);
 
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const raw = window.localStorage.getItem(`markerLayers:${id}`);
-    if (raw) {
-      try {
-        setHidden(new Set(JSON.parse(raw) as string[]));
-      } catch {
-        // ignore malformed storage
-      }
-    }
-  }, [id]);
+  // Seed from localStorage on mount; re-read during render if the map id changes
+  // (React's recommended pattern for adjusting state on a prop change).
+  const [hidden, setHidden] = useState<Set<string>>(() => readHiddenLayers(id));
+  const [hiddenLoadedFor, setHiddenLoadedFor] = useState(id);
+  if (id !== hiddenLoadedFor) {
+    setHiddenLoadedFor(id);
+    setHidden(readHiddenLayers(id));
+  }
 
   function updateHidden(next: Set<string>) {
     setHidden(next);
@@ -139,10 +134,11 @@ export function MapViewer() {
 
   const selectedMarker = markers.find((m) => m.id === selectedId) ?? null;
 
-  // Clear the selection if its layer gets hidden via the Layers panel.
-  useEffect(() => {
-    if (selectedMarker && !isMarkerVisible(selectedMarker, hidden)) setSelectedId(null);
-  }, [hidden, selectedMarker]);
+  // Clear the selection if its layer gets hidden via the Layers panel. Done
+  // during render (guarded so it settles in one pass) rather than in an effect.
+  if (selectedId && selectedMarker && !isMarkerVisible(selectedMarker, hidden)) {
+    setSelectedId(null);
+  }
 
   if (loading) {
     return (

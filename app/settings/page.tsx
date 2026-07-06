@@ -109,7 +109,7 @@ export default function SettingsPage() {
     <div className="min-h-screen">
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center gap-3">
-          <Button size="icon-sm" variant="ghost" onClick={() => router.push("/")}>
+          <Button size="icon-sm" variant="ghost" onClick={() => router.push("/")} aria-label="Back to dashboard" title="Back to dashboard">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <h1 className="font-bold text-lg">Settings</h1>
@@ -135,7 +135,7 @@ export default function SettingsPage() {
           <div>
             <h2 className="font-semibold">D&D Beyond Characters</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Add each PC's character sheet URL. They'll appear in the D&D Beyond tab when adding combatants.
+              Add each PC’s character sheet URL. They’ll appear in the D&D Beyond tab when adding combatants.
             </p>
           </div>
 
@@ -147,7 +147,7 @@ export default function SettingsPage() {
                 <li>Open the character on D&D Beyond</li>
                 <li>Click <strong>Share</strong> and enable sharing if prompted</li>
                 <li>Copy the URL from the browser address bar</li>
-                <li>Paste it below — characters don't need to be public, just shared</li>
+                <li>Paste it below — characters don’t need to be public, just shared</li>
               </ol>
             </div>
           </div>
@@ -192,6 +192,8 @@ export default function SettingsPage() {
                   <Button
                     size="icon-sm"
                     variant="ghost"
+                    aria-label={`Remove ${entry.name || "character"}`}
+                    title="Remove character"
                     className="text-destructive hover:text-destructive flex-none"
                     onClick={async () => {
                     const updated = shareUrls.filter((u) => u.id !== entry.id);

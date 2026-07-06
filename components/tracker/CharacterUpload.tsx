@@ -132,7 +132,7 @@ export function CharacterUpload({ onParsed }: CharacterUploadProps) {
                 <span className="font-semibold text-sm">{parsed.name}</span>
                 <span className="text-xs text-muted-foreground capitalize">{parsed.type}</span>
               </div>
-              <Button size="icon-sm" variant="ghost" onClick={reset}>
+              <Button size="icon-sm" variant="ghost" onClick={reset} aria-label="Clear uploaded character" title="Clear">
                 <X className="w-3.5 h-3.5" />
               </Button>
             </div>

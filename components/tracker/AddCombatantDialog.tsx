@@ -426,8 +426,14 @@ export function AddCombatantDialog({ open, onClose }: AddCombatantDialogProps) {
                 {monsterResults.map((m) => (
                   <div
                     key={m.slug}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/50 transition-colors cursor-pointer group"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Add ${m.name}`}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer group"
                     onClick={() => addMonster(m)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); addMonster(m); }
+                    }}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -444,6 +450,8 @@ export function AddCombatantDialog({ open, onClose }: AddCombatantDialogProps) {
                     <Button
                       size="icon-sm"
                       variant="ghost"
+                      aria-hidden
+                      tabIndex={-1}
                       className="opacity-0 group-hover:opacity-100"
                     >
                       {addingSlug === m.slug ? (
@@ -543,8 +551,14 @@ export function AddCombatantDialog({ open, onClose }: AddCombatantDialogProps) {
                 {libraryEntries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/50 transition-colors cursor-pointer group"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Add ${entry.name}`}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer group"
                     onClick={() => addFromLibrary(entry)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); addFromLibrary(entry); }
+                    }}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -559,13 +573,15 @@ export function AddCombatantDialog({ open, onClose }: AddCombatantDialogProps) {
                         {entry.tags.length > 0 && ` · ${entry.tags.join(", ")}`}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                      <Button size="icon-sm" variant="ghost">
+                    <div className="relative z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                      <Button size="icon-sm" variant="ghost" aria-hidden tabIndex={-1}>
                         <Plus className="w-3.5 h-3.5" />
                       </Button>
                       <Button
                         size="icon-sm"
                         variant="ghost"
+                        aria-label={`Delete ${entry.name} from library`}
+                        title="Delete from library"
                         className="text-destructive hover:text-destructive"
                         onClick={(e) => deleteFromLibrary(entry.id, e)}
                       >
@@ -602,8 +618,14 @@ export function AddCombatantDialog({ open, onClose }: AddCombatantDialogProps) {
                   {ddbCharacters.map((char) => (
                     <div
                       key={char.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/50 transition-colors cursor-pointer group"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Add ${char.name}`}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer group"
                       onClick={() => { addDDBCharacter(char); onClose(); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); addDDBCharacter(char); onClose(); }
+                      }}
                     >
                       {char.avatarUrl && (
                         <img
@@ -627,6 +649,8 @@ export function AddCombatantDialog({ open, onClose }: AddCombatantDialogProps) {
                       <Button
                         size="icon-sm"
                         variant="ghost"
+                        aria-hidden
+                        tabIndex={-1}
                         className="opacity-0 group-hover:opacity-100"
                       >
                         <Plus className="w-3.5 h-3.5" />

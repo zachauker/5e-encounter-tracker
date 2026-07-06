@@ -9,7 +9,7 @@ import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { useCampaignStore } from "@/lib/store/campaign-store";
 import type { ResolvedMarker } from "@/components/maps/map-types";
 import { MarkerLayerControl } from "@/components/maps/MarkerLayerControl";
-import { isMarkerVisible } from "@/components/maps/marker-layers";
+import { isMarkerVisible, readHiddenLayers } from "@/components/maps/marker-layers";
 
 const WorldMapCanvas = dynamic(
   () => import("@/components/maps/WorldMapCanvas").then((m) => m.WorldMapCanvas),
@@ -29,7 +29,10 @@ export function WorldMapViewer() {
   const [worldMapId, setWorldMapId] = useState<string | null>(null);
   const [markers, setMarkers] = useState<ResolvedMarker[]>([]);
   const [themes, setThemes] = useState<ThemeOption[]>([]);
-  const [theme, setTheme] = useState<string>("classic");
+  const [theme, setTheme] = useState<string>(() => {
+    if (typeof window === "undefined") return "classic";
+    return window.localStorage.getItem(THEME_KEY) ?? "classic";
+  });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [addMode, setAddMode] = useState(false);
@@ -42,22 +45,16 @@ export function WorldMapViewer() {
   const [editing, setEditing] = useState<ResolvedMarker | null>(null);
   const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  // worldMapId arrives from an async fetch, so seed the hidden set during render
+  // once it's known (and whenever it changes) rather than in a set-state effect.
+  const [hiddenLoadedFor, setHiddenLoadedFor] = useState<string | null>(null);
+  if (worldMapId && worldMapId !== hiddenLoadedFor) {
+    setHiddenLoadedFor(worldMapId);
+    setHidden(readHiddenLayers(worldMapId));
+  }
   const [importing, setImporting] = useState(false);
   const [moveMode, setMoveMode] = useState(false);
   const [lastMove, setLastMove] = useState<{ markerId: string; prevX: number; prevY: number; title: string } | null>(null);
-
-  // Load persisted hidden layers once the world map id is known.
-  useEffect(() => {
-    if (!worldMapId || typeof window === "undefined") return;
-    const raw = window.localStorage.getItem(`markerLayers:${worldMapId}`);
-    if (raw) {
-      try {
-        setHidden(new Set(JSON.parse(raw) as string[]));
-      } catch {
-        // ignore malformed storage
-      }
-    }
-  }, [worldMapId]);
 
   function updateHidden(next: Set<string>) {
     setHidden(next);
@@ -92,21 +89,26 @@ export function WorldMapViewer() {
     }
   }
 
-  // Theme list + persisted choice.
+  // Theme list. The persisted choice is seeded into `theme` state lazily above.
   useEffect(() => {
     fetch("/api/world/styles/themes.json")
       .then((r) => (r.ok ? r.json() : { themes: [] }))
       .then((d: { themes: ThemeOption[] }) => setThemes(d.themes));
-    const saved = typeof window !== "undefined" ? window.localStorage.getItem(THEME_KEY) : null;
-    if (saved) setTheme(saved);
   }, []);
+
+  // Reset the load state during render when the campaign changes (the fetch
+  // effect below then resolves it), avoiding synchronous set-state in the effect.
+  const [loadingCampaign, setLoadingCampaign] = useState<string | null>(null);
+  if (activeCampaignId && activeCampaignId !== loadingCampaign) {
+    setLoadingCampaign(activeCampaignId);
+    setLoading(true);
+    setLoadError(false);
+  }
 
   // Get-or-create the world map for the active campaign, then load markers.
   useEffect(() => {
     if (!activeCampaignId) return;
     let cancelled = false;
-    setLoading(true);
-    setLoadError(false);
     fetch(`/api/world?campaignId=${activeCampaignId}`)
       .then(async (r) => {
         if (!r.ok) {
@@ -164,10 +166,11 @@ export function WorldMapViewer() {
 
   const selectedMarker = markers.find((m) => m.id === selectedId) ?? null;
 
-  // Clear the selection if its layer gets hidden via the Layers panel.
-  useEffect(() => {
-    if (selectedMarker && !isMarkerVisible(selectedMarker, hidden)) setSelectedId(null);
-  }, [hidden, selectedMarker]);
+  // Clear the selection if its layer gets hidden via the Layers panel. Done
+  // during render (guarded so it settles in one pass) rather than in an effect.
+  if (selectedId && selectedMarker && !isMarkerVisible(selectedMarker, hidden)) {
+    setSelectedId(null);
+  }
 
   if (!activeCampaignId) {
     return <div className="flex items-center justify-center h-full text-muted-foreground">Select a campaign first.</div>;

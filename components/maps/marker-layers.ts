@@ -70,3 +70,17 @@ export function deriveLayerGroups(markers: ResolvedMarker[]): LayerGroup[] {
 export function isMarkerVisible(marker: ResolvedMarker, hidden: Set<string>): boolean {
   return !hidden.has(layerKeyOf(marker));
 }
+
+// Read the persisted hidden-layer set for a map from localStorage. Safe on the
+// server (returns an empty set) and against malformed storage. Used to seed the
+// hidden-layers state without a set-state-in-effect hydration step.
+export function readHiddenLayers(mapId: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(`markerLayers:${mapId}`);
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    // ignore malformed storage
+  }
+  return new Set();
+}

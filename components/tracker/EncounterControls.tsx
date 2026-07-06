@@ -119,7 +119,7 @@ export function EncounterControls({ onSave, saving, saveError, onNavigateBack }:
               }}
               className="h-7 text-sm font-semibold"
             />
-            <Button size="icon-sm" variant="ghost" onClick={saveName}>
+            <Button size="icon-sm" variant="ghost" onClick={saveName} aria-label="Save name" title="Save name">
               <Check className="w-3.5 h-3.5" />
             </Button>
           </div>

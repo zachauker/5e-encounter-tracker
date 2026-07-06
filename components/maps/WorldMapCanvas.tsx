@@ -76,7 +76,9 @@ export function WorldMapCanvas({
   // Kept in a ref so markers created lazily (on zoom reveal) pick up the current
   // value without the marker-sync effect depending on it.
   const markersDraggableRef = useRef(markersDraggable);
-  markersDraggableRef.current = markersDraggable;
+  useEffect(() => {
+    markersDraggableRef.current = markersDraggable;
+  });
 
   const cbRef = useRef({ addMode, onMapClick, onReady, onZoomChange });
   useEffect(() => {

@@ -340,6 +340,8 @@ export function CombatantCard({ combatant: c, isActive, dragHandleProps }: Comba
               <Button
                 size="sm"
                 variant="ghost"
+                aria-label={`Remove ${c.name}`}
+                title={`Remove ${c.name}`}
                 className="h-7 text-xs text-destructive hover:text-destructive"
                 onClick={() => removeCombatant(c.id)}
               >

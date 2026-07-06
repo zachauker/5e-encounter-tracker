@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, type LucideIcon } from "lucide-react";
@@ -15,7 +15,6 @@ interface SimpleEntityManagerProps {
 }
 
 export function SimpleEntityManager({ resourcePath, label, icon: Icon }: SimpleEntityManagerProps) {
-  const router = useRouter();
   const { activeCampaignId } = useCampaignStore();
   const [entities, setEntities] = useState<SimpleEntity[]>([]);
   const [query, setQuery] = useState("");
@@ -61,9 +60,14 @@ export function SimpleEntityManager({ resourcePath, label, icon: Icon }: SimpleE
         {filtered.map((e) => (
           <div
             key={e.id}
-            onClick={() => router.push(`/${resourcePath}/${e.id}`)}
-            className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/30 transition-colors cursor-pointer group"
+            className="relative flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/30 transition-colors group"
           >
+            {/* Stretched link makes the whole row a keyboard-focusable nav target */}
+            <Link
+              href={`/${resourcePath}/${e.id}`}
+              aria-label={`Open ${label.toLowerCase().replace(/s$/, "")}: ${e.name}`}
+              className="absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+            />
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm">{e.name}</p>
               {e.description && <p className="text-xs text-muted-foreground truncate">{e.description}</p>}
@@ -71,7 +75,8 @@ export function SimpleEntityManager({ resourcePath, label, icon: Icon }: SimpleE
             <Button
               size="icon-sm"
               variant="ghost"
-              className="opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+              aria-label={`Delete ${label.toLowerCase().replace(/s$/, "")}: ${e.name}`}
+              className="relative z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-destructive hover:text-destructive"
               onClick={(ev) => remove(e.id, ev)}
             >
               <Trash2 className="w-3.5 h-3.5" />

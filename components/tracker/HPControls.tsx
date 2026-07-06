@@ -114,6 +114,8 @@ export function HPControls({ combatantId, hpCurrent, hpMax, hpTemp, compact = fa
           size="icon-sm"
           variant="ghost"
           onClick={applyInput}
+          aria-label={mode === "damage" ? "Apply damage" : mode === "heal" ? "Apply healing" : "Set HP"}
+          title={mode === "damage" ? "Apply damage" : mode === "heal" ? "Apply healing" : "Set HP"}
           className={cn(
             mode === "damage" && "text-red-400 hover:text-red-300",
             mode === "heal" && "text-green-400 hover:text-green-300"
