@@ -179,9 +179,78 @@ function main() {
   db.close();
 }
 
-// Placeholder until Task 2 fills it in; keeps main() runnable in dry-run.
-function seed() {
-  throw new Error("seed() not implemented yet");
+// Upsert locations + entity-linked world markers. Idempotent on (campaign, lower(name))
+// for locations and on (worldMapId, entity_id) for markers.
+function seed(db, campaignId, records) {
+  let world = db
+    .prepare("SELECT id FROM maps WHERE campaign_id = ? AND render_mode = 'world'")
+    .get(campaignId);
+  if (!world) {
+    const id = crypto.randomUUID();
+    const t = nowSec();
+    db.prepare(
+      "INSERT INTO maps (id, campaign_id, name, image_path, parent_map_id, render_mode, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)"
+    ).run(id, campaignId, "Exandria", "world", null, "world", t, t);
+    world = { id };
+    console.log(`Created world map ${id}.`);
+  }
+  const worldMapId = world.id;
+
+  const findLoc = db.prepare("SELECT id FROM locations WHERE campaign_id = ? AND lower(name) = ?");
+  const insLoc = db.prepare(
+    "INSERT INTO locations (id, campaign_id, name, notion_url, description, created_at, updated_at) VALUES (?,?,?,?,?,?,?)"
+  );
+  const findMarker = db.prepare(
+    "SELECT id FROM map_markers WHERE map_id = ? AND type = 'location' AND entity_id = ?"
+  );
+  const insMarker = db.prepare(
+    "INSERT INTO map_markers (id, map_id, x, y, type, entity_id, target_map_id, title, note, min_zoom, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+  );
+
+  let locCreated = 0;
+  let locSkipped = 0;
+  let mkCreated = 0;
+  let mkSkipped = 0;
+
+  const run = db.transaction((recs) => {
+    for (const r of recs) {
+      const existingLoc = findLoc.get(campaignId, r.key);
+      let locId;
+      if (existingLoc) {
+        locId = existingLoc.id;
+        locSkipped++;
+      } else {
+        locId = crypto.randomUUID();
+        const t = nowSec();
+        insLoc.run(locId, campaignId, r.name, null, r.description, t, t);
+        locCreated++;
+      }
+      if (findMarker.get(worldMapId, locId)) {
+        mkSkipped++;
+      } else {
+        const t = nowSec();
+        insMarker.run(
+          crypto.randomUUID(),
+          worldMapId,
+          r.lng,
+          r.lat,
+          "location",
+          locId,
+          null,
+          r.name,
+          null,
+          r.minZoom,
+          t,
+          t
+        );
+        mkCreated++;
+      }
+    }
+  });
+  run(records);
+
+  console.log(`Locations: ${locCreated} created, ${locSkipped} existing.`);
+  console.log(`Markers:   ${mkCreated} created, ${mkSkipped} existing.`);
 }
 
 module.exports = { readableRegionKind, composeDescription, loadRecords, dedupe };
