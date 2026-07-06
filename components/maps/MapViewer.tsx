@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -39,6 +39,10 @@ export function MapViewer() {
   const [editingMarker, setEditingMarker] = useState<ResolvedMarker | null>(null);
   const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
   const [moveMode, setMoveMode] = useState(false);
+  const [lastMove, setLastMove] = useState<{ markerId: string; prevX: number; prevY: number; title: string } | null>(null);
+  // Snapshot of a marker's position at the start of a drag (dragMove updates
+  // local state live, so the pre-drag position must be captured on first move).
+  const dragOriginRef = useRef<{ id: string; x: number; y: number } | null>(null);
 
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
@@ -97,10 +101,29 @@ export function MapViewer() {
   }
 
   function handleMarkerDragMove(markerId: string, pos: { x: number; y: number }) {
+    if (dragOriginRef.current?.id !== markerId) {
+      const cur = markers.find((m) => m.id === markerId);
+      if (cur) dragOriginRef.current = { id: markerId, x: cur.x, y: cur.y };
+    }
     setMarkers((prev) => prev.map((m) => (m.id === markerId ? { ...m, ...pos } : m)));
   }
 
+  function persistMarkerPosition(markerId: string, x: number, y: number) {
+    setMarkers((prev) => prev.map((m) => (m.id === markerId ? { ...m, x, y } : m)));
+    fetch(`/api/maps/markers/${markerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ x, y }),
+    });
+  }
+
   function handleMarkerDragEnd(markerId: string, pos: { x: number; y: number }) {
+    const origin = dragOriginRef.current;
+    if (origin && origin.id === markerId) {
+      const m = markers.find((x) => x.id === markerId);
+      setLastMove({ markerId, prevX: origin.x, prevY: origin.y, title: m?.resolvedTitle ?? "marker" });
+    }
+    dragOriginRef.current = null;
     fetch(`/api/maps/markers/${markerId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -108,7 +131,18 @@ export function MapViewer() {
     });
   }
 
+  function undoMove() {
+    if (!lastMove) return;
+    persistMarkerPosition(lastMove.markerId, lastMove.prevX, lastMove.prevY);
+    setLastMove(null);
+  }
+
   const selectedMarker = markers.find((m) => m.id === selectedId) ?? null;
+
+  // Clear the selection if its layer gets hidden via the Layers panel.
+  useEffect(() => {
+    if (selectedMarker && !isMarkerVisible(selectedMarker, hidden)) setSelectedId(null);
+  }, [hidden, selectedMarker]);
 
   if (loading) {
     return (
@@ -192,6 +226,20 @@ export function MapViewer() {
           <TiledMapCanvas {...sharedCanvasProps} onZoomChange={setViewZoom} />
         ) : (
           <StaticMapCanvas {...sharedCanvasProps} />
+        )}
+
+        {lastMove && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2 shadow-xl z-[1100]">
+            <span className="text-sm">
+              Moved <span className="font-medium">{lastMove.title}</span>.
+            </span>
+            <button onClick={undoMove} className="text-sm font-medium text-primary hover:underline">
+              Undo
+            </button>
+            <button onClick={() => setLastMove(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         )}
 
         {selectedMarker && (

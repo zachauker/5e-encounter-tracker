@@ -44,6 +44,7 @@ export function WorldMapViewer() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
   const [moveMode, setMoveMode] = useState(false);
+  const [lastMove, setLastMove] = useState<{ markerId: string; prevX: number; prevY: number; title: string } | null>(null);
 
   // Load persisted hidden layers once the world map id is known.
   useEffect(() => {
@@ -138,16 +139,35 @@ export function WorldMapViewer() {
     setAddMode(false);
   }
 
-  function handleMarkerDragEnd(markerId: string, lngLat: { lng: number; lat: number }) {
-    setMarkers((prev) => prev.map((m) => (m.id === markerId ? { ...m, x: lngLat.lng, y: lngLat.lat } : m)));
+  function persistMarkerPosition(markerId: string, x: number, y: number) {
+    setMarkers((prev) => prev.map((m) => (m.id === markerId ? { ...m, x, y } : m)));
     fetch(`/api/maps/markers/${markerId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ x: lngLat.lng, y: lngLat.lat }),
+      body: JSON.stringify({ x, y }),
     });
   }
 
+  function handleMarkerDragEnd(markerId: string, lngLat: { lng: number; lat: number }) {
+    // WorldMapCanvas only reports the drop (no live drag), so `markers` still
+    // holds the pre-drag position here — capture it for undo before overwriting.
+    const prev = markers.find((m) => m.id === markerId);
+    if (prev) setLastMove({ markerId, prevX: prev.x, prevY: prev.y, title: prev.resolvedTitle });
+    persistMarkerPosition(markerId, lngLat.lng, lngLat.lat);
+  }
+
+  function undoMove() {
+    if (!lastMove) return;
+    persistMarkerPosition(lastMove.markerId, lastMove.prevX, lastMove.prevY);
+    setLastMove(null);
+  }
+
   const selectedMarker = markers.find((m) => m.id === selectedId) ?? null;
+
+  // Clear the selection if its layer gets hidden via the Layers panel.
+  useEffect(() => {
+    if (selectedMarker && !isMarkerVisible(selectedMarker, hidden)) setSelectedId(null);
+  }, [hidden, selectedMarker]);
 
   if (!activeCampaignId) {
     return <div className="flex items-center justify-center h-full text-muted-foreground">Select a campaign first.</div>;
@@ -231,6 +251,20 @@ export function WorldMapViewer() {
           onMarkerDragEnd={handleMarkerDragEnd}
           onZoomChange={setViewZoom}
         />
+
+        {lastMove && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2 shadow-xl z-[1100]">
+            <span className="text-sm">
+              Moved <span className="font-medium">{lastMove.title}</span>.
+            </span>
+            <button onClick={undoMove} className="text-sm font-medium text-primary hover:underline">
+              Undo
+            </button>
+            <button onClick={() => setLastMove(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {selectedMarker && (
           <div className="absolute top-4 left-4 w-64 rounded-lg border border-border bg-card p-3 shadow-xl space-y-2 z-[1000]">
