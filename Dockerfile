@@ -9,6 +9,11 @@ RUN npm install --prefer-offline
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# The world-map artifacts (world-data/build) are git-ignored but baked into the
+# runtime image below, so they must be present in the build context. Fail fast
+# with instructions rather than shipping an image whose /world 404s at runtime.
+RUN test -f world-data/build/styles/themes.json || \
+  (echo "ERROR: world-data/build artifacts missing from the build context. Generate them before 'docker build': scripts/world/fetch-geojson.sh && scripts/world/build-tiles.sh && node scripts/world/build-glyphs.js && node scripts/world/build-themes.js" && exit 1)
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
@@ -33,6 +38,11 @@ COPY --from=builder /app/.next/static ./.next/static
 # fixes this.
 COPY --from=builder /app/node_modules/sharp ./node_modules/sharp
 COPY --from=builder /app/node_modules/@img ./node_modules/@img
+# Bake the world-map artifacts (pmtiles + glyphs + styles, ~17MB) into the image
+# so /api/world serves them from the default WORLD_DIR (cwd/world-data/build) with
+# no volume mount or WORLD_DATA_DIR needed. Set WORLD_DATA_DIR to override with a
+# mounted volume instead.
+COPY --from=builder /app/world-data/build ./world-data/build
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

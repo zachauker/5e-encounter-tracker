@@ -134,9 +134,16 @@ Contract the in-app viewer consumes:
 
 ## Serving in the app (Plan 2)
 
-The app serves the artifacts from `WORLD_DIR`:
-- **Dev:** defaults to `world-data/build` (no copy needed after running the build scripts).
-- **Prod:** set `WORLD_DATA_DIR=/data/world` and run `scripts/world/deploy-to-data.sh`
-  on the host to copy `exandria.pmtiles` + `glyphs/` + `styles/` onto the mounted
-  `/data` volume. `tippecanoe`/`fontnik` are NOT needed in the production image —
-  only the generated files are.
+The app serves the artifacts from `WORLD_DIR` (the `/api/world/[...path]` route),
+which defaults to `world-data/build`:
+- **Dev:** just run the build scripts; the default path is served directly.
+- **Prod (default): the artifacts are baked into the Docker image.** The
+  `Dockerfile` copies `world-data/build` into the runtime image, so the default
+  `WORLD_DIR` (`/app/world-data/build`) resolves with no volume or env var. The
+  artifacts must therefore exist in the build context at `docker build` time —
+  they're git-ignored, so run the four `scripts/world/*` build steps first (the
+  builder stage fails fast with this instruction if they're missing). `tippecanoe`
+  /`fontnik` are still NOT needed in the image — only the pre-generated files are.
+- **Prod (volume override, optional):** set `WORLD_DATA_DIR=/data/world` on the
+  container and run `scripts/world/deploy-to-data.sh` on the host to copy the
+  artifacts onto the mounted `/data` volume instead of baking them in.
