@@ -9,6 +9,7 @@ export function StaticMapCanvas({
   map,
   markers,
   addMode,
+  markersDraggable,
   selectedId,
   onImageClick,
   onMarkerClick,
@@ -93,9 +94,9 @@ export function StaticMapCanvas({
             {markers.map((m) => (
               <div
                 key={m.id}
-                className="absolute -translate-x-1/2 -translate-y-full cursor-pointer"
+                className={`absolute -translate-x-1/2 -translate-y-full ${markersDraggable ? "cursor-move" : "cursor-pointer"}`}
                 style={{ left: `${m.x * 100}%`, top: `${m.y * 100}%` }}
-                onPointerDown={(e) => startDrag(m.id, e)}
+                onPointerDown={markersDraggable ? (e) => startDrag(m.id, e) : undefined}
                 onClick={(e) => {
                   e.stopPropagation();
                   onMarkerClick(m);

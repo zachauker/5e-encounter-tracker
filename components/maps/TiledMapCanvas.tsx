@@ -79,6 +79,7 @@ function MarkerWithReveal({
   marker,
   selected,
   position,
+  draggable,
   onMarkerClick,
   onMarkerDragMove,
   onMarkerDragEnd,
@@ -89,6 +90,7 @@ function MarkerWithReveal({
   marker: ResolvedMarker;
   selected: boolean;
   position: L.LatLng;
+  draggable: boolean;
   onMarkerClick: (marker: ResolvedMarker) => void;
   onMarkerDragMove: (markerId: string, pos: { x: number; y: number }) => void;
   onMarkerDragEnd: (markerId: string, pos: { x: number; y: number }) => void;
@@ -112,7 +114,7 @@ function MarkerWithReveal({
     <Marker
       position={position}
       icon={icon}
-      draggable
+      draggable={draggable}
       eventHandlers={{
         click: () => onMarkerClick(marker),
         drag: (e) => {
@@ -132,6 +134,7 @@ export function TiledMapCanvas({
   map,
   markers,
   addMode,
+  markersDraggable,
   selectedId,
   onImageClick,
   onMarkerClick,
@@ -187,6 +190,7 @@ export function TiledMapCanvas({
             marker={m}
             selected={m.id === selectedId}
             position={fractionalToLatLng(m.x, m.y)}
+            draggable={markersDraggable}
             onMarkerClick={onMarkerClick}
             onMarkerDragMove={onMarkerDragMove}
             onMarkerDragEnd={onMarkerDragEnd}

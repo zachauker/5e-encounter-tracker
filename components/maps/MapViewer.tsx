@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Plus, X, ChevronRight } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, X, ChevronRight, Move } from "lucide-react";
 import { StaticMapCanvas } from "@/components/maps/StaticMapCanvas";
 import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { useCampaignStore } from "@/lib/store/campaign-store";
@@ -38,6 +38,7 @@ export function MapViewer() {
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
   const [editingMarker, setEditingMarker] = useState<ResolvedMarker | null>(null);
   const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
+  const [moveMode, setMoveMode] = useState(false);
 
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
@@ -130,6 +131,7 @@ export function MapViewer() {
     map,
     markers: markers.filter((m) => isMarkerVisible(m, hidden)),
     addMode,
+    markersDraggable: moveMode,
     selectedId,
     onImageClick: handleCanvasClick,
     onMarkerClick: handleMarkerClick,
@@ -159,8 +161,24 @@ export function MapViewer() {
           <MarkerLayerControl markers={markers} hidden={hidden} onChange={updateHidden} />
           <Button
             size="sm"
+            variant={moveMode ? "initiative" : "outline"}
+            onClick={() => {
+              setMoveMode((v) => !v);
+              setAddMode(false);
+            }}
+            className="gap-1.5"
+            title="Toggle dragging markers to reposition them"
+          >
+            <Move className="w-3.5 h-3.5" />
+            {moveMode ? "Done Moving" : "Move Pins"}
+          </Button>
+          <Button
+            size="sm"
             variant={addMode ? "initiative" : "outline"}
-            onClick={() => setAddMode((v) => !v)}
+            onClick={() => {
+              setAddMode((v) => !v);
+              setMoveMode(false);
+            }}
             className="gap-1.5"
           >
             {addMode ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}

@@ -26,6 +26,7 @@ const WORLD_MAX_ZOOM = 12;
 export interface WorldMapCanvasProps {
   theme: string;
   addMode: boolean;
+  markersDraggable: boolean;
   onMapClick: (lngLat: { lng: number; lat: number }) => void;
   onReady?: (map: MapLibreMap) => void;
   onZoomChange?: (zoom: number) => void;
@@ -52,6 +53,7 @@ async function loadThemeStyle(theme: string, origin: string): Promise<StyleSpeci
 export function WorldMapCanvas({
   theme,
   addMode,
+  markersDraggable,
   onMapClick,
   onReady,
   onZoomChange,
@@ -71,6 +73,10 @@ export function WorldMapCanvas({
   useEffect(() => {
     markerCbRef.current = { onMarkerClick, onMarkerDragEnd };
   });
+  // Kept in a ref so markers created lazily (on zoom reveal) pick up the current
+  // value without the marker-sync effect depending on it.
+  const markersDraggableRef = useRef(markersDraggable);
+  markersDraggableRef.current = markersDraggable;
 
   const cbRef = useRef({ addMode, onMapClick, onReady, onZoomChange });
   useEffect(() => {
@@ -182,7 +188,9 @@ export function WorldMapCanvas({
           evt.stopPropagation();
           markerCbRef.current.onMarkerClick(marker);
         });
-        inst = new Marker({ element: el, draggable: true, anchor: "bottom" }).setLngLat(lngLat).addTo(glMap);
+        inst = new Marker({ element: el, draggable: markersDraggableRef.current, anchor: "bottom" })
+          .setLngLat(lngLat)
+          .addTo(glMap);
         inst.on("dragend", () => {
           const { lng, lat } = inst!.getLngLat();
           markerCbRef.current.onMarkerDragEnd(marker.id, { lng, lat });
@@ -196,6 +204,11 @@ export function WorldMapCanvas({
       }
     }
   }, [markers, selectedId, ready, zoom]);
+
+  // Toggle draggability on existing marker instances when Move mode changes.
+  useEffect(() => {
+    for (const inst of markerInstancesRef.current.values()) inst.setDraggable(markersDraggable);
+  }, [markersDraggable, markers, zoom, ready]);
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-black/40">

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { Loader2, Plus, X, Download } from "lucide-react";
+import { Loader2, Plus, X, Download, Move } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { useCampaignStore } from "@/lib/store/campaign-store";
@@ -43,6 +43,7 @@ export function WorldMapViewer() {
   const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
+  const [moveMode, setMoveMode] = useState(false);
 
   // Load persisted hidden layers once the world map id is known.
   useEffect(() => {
@@ -192,8 +193,24 @@ export function WorldMapViewer() {
           </select>
           <Button
             size="sm"
+            variant={moveMode ? "initiative" : "outline"}
+            onClick={() => {
+              setMoveMode((v) => !v);
+              setAddMode(false);
+            }}
+            className="gap-1.5"
+            title="Toggle dragging markers to reposition them"
+          >
+            <Move className="w-3.5 h-3.5" />
+            {moveMode ? "Done Moving" : "Move Pins"}
+          </Button>
+          <Button
+            size="sm"
             variant={addMode ? "initiative" : "outline"}
-            onClick={() => setAddMode((v) => !v)}
+            onClick={() => {
+              setAddMode((v) => !v);
+              setMoveMode(false);
+            }}
             className="gap-1.5"
           >
             {addMode ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
@@ -208,6 +225,7 @@ export function WorldMapViewer() {
           markers={visibleMarkers}
           selectedId={selectedId}
           addMode={addMode}
+          markersDraggable={moveMode}
           onMapClick={handleMapClick}
           onMarkerClick={(m) => setSelectedId(m.id === selectedId ? null : m.id)}
           onMarkerDragEnd={handleMarkerDragEnd}

@@ -35,6 +35,7 @@ export interface MapCanvasProps {
   map: MapData;
   markers: ResolvedMarker[];
   addMode: boolean;
+  markersDraggable: boolean;
   selectedId: string | null;
   onImageClick: (pos: { x: number; y: number }) => void;
   onMarkerClick: (marker: ResolvedMarker) => void;
