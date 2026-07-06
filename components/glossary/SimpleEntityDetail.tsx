@@ -9,6 +9,7 @@ import { ArrowLeft, Pencil, Trash2, Loader2, Map as MapIcon, type LucideIcon } f
 import { NotionBlocks } from "@/components/glossary/NotionBlocks";
 import { RelatedCard } from "@/components/glossary/RelatedCard";
 import { SimpleEntityFormDialog } from "@/components/entities/SimpleEntityFormDialog";
+import { Badge } from "@/components/ui/badge";
 import { useCampaignStore } from "@/lib/store/campaign-store";
 import type { NotionBlockData } from "@/lib/notion/client";
 
@@ -16,6 +17,7 @@ interface SimpleEntityDetailData {
   id: string;
   name: string;
   description: string | null;
+  type?: string | null;
   notionUrl: string | null;
   linkedCharacters: { id: string; name: string; type: string }[];
   mapMarkers?: { mapId: string; mapName: string; markerId: string; renderMode: "static" | "tiled" | "world" }[];
@@ -116,6 +118,14 @@ export function SimpleEntityDetail({ resourcePath, label, icon: Icon }: SimpleEn
     );
   }
 
+  const LOCATION_TYPE_LABELS: Record<string, string> = {
+    city: "City",
+    town: "Town",
+    poi: "Point of Interest",
+    region: "Region",
+    other: "Other",
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
       <Link
@@ -128,6 +138,11 @@ export function SimpleEntityDetail({ resourcePath, label, icon: Icon }: SimpleEn
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold flex items-center gap-2">
           <Icon className="w-5 h-5 text-muted-foreground" /> {entity.name}
+          {resourcePath === "locations" && entity.type && (
+            <Badge variant="outline" className="text-xs font-normal uppercase tracking-wide">
+              {LOCATION_TYPE_LABELS[entity.type] ?? entity.type}
+            </Badge>
+          )}
         </h1>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => setEditOpen(true)} className="gap-1.5">

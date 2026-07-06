@@ -10,6 +10,7 @@ export interface SimpleEntity {
   name: string;
   description: string | null;
   notionUrl: string | null;
+  type?: string | null;
 }
 
 interface SimpleEntityFormDialogProps {
@@ -34,6 +35,7 @@ export function SimpleEntityFormDialog({
   const [name, setName] = useState(entity?.name ?? "");
   const [description, setDescription] = useState(entity?.description ?? "");
   const [notionUrl, setNotionUrl] = useState(entity?.notionUrl ?? "");
+  const [type, setType] = useState(entity?.type ?? "other");
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -45,6 +47,7 @@ export function SimpleEntityFormDialog({
         name: name.trim(),
         description: description.trim() || null,
         notionUrl: notionUrl.trim() || null,
+        ...(resourcePath === "locations" ? { type } : {}),
       };
       if (entity) {
         await fetch(`/api/${resourcePath}/${entity.id}`, {
@@ -81,6 +84,19 @@ export function SimpleEntityFormDialog({
             rows={3}
             className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
+          {resourcePath === "locations" && (
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="city">City</option>
+              <option value="town">Town</option>
+              <option value="poi">Point of Interest</option>
+              <option value="region">Region</option>
+              <option value="other">Other</option>
+            </select>
+          )}
           <Input
             placeholder="Notion page URL (optional)"
             value={notionUrl}
