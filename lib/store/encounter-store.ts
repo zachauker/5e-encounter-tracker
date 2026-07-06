@@ -10,10 +10,13 @@ interface EncounterState {
   statBlockCombatantId: string | null;
   isDirty: boolean;
   pendingRemove: CombatantWithParsed | null;
+  /** Combatant IDs whose last D&D Beyond sync failed — surfaced as a stale badge. */
+  syncErrors: Set<string>;
 
   setEncounter: (encounter: EncounterWithCombatants) => void;
   selectCombatant: (id: string | null) => void;
   showStatBlock: (id: string | null) => void;
+  setSyncErrors: (ids: Set<string>) => void;
 
   updateHP: (combatantId: string, delta: number) => void;
   setHP: (combatantId: string, current: number) => void;
@@ -51,16 +54,18 @@ function sortedByInitiative(combatants: CombatantWithParsed[]): CombatantWithPar
 }
 
 export const useEncounterStore = create<EncounterState>()(
-  subscribeWithSelector((set, get) => ({
+  subscribeWithSelector((set) => ({
     encounter: null,
     selectedCombatantId: null,
     statBlockCombatantId: null,
     isDirty: false,
     pendingRemove: null,
+    syncErrors: new Set(),
 
     setEncounter: (encounter) => set({ encounter, isDirty: false }),
     selectCombatant: (id) => set({ selectedCombatantId: id }),
     showStatBlock: (id) => set({ statBlockCombatantId: id }),
+    setSyncErrors: (syncErrors) => set({ syncErrors }),
 
     // Sync DDB character data + live combat stats from the player's sheet.
     // Does NOT touch conditions or initiative — those stay under DM control.

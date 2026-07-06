@@ -7,6 +7,7 @@ import { Swords, Users, MapPin, Package, Shield, Command, Settings, Map, Globe }
 import { cn } from "@/lib/utils";
 import { useCampaignStore } from "@/lib/store/campaign-store";
 import { useUIStore } from "@/lib/store/ui-store";
+import { useEncounterStore } from "@/lib/store/encounter-store";
 import type { Campaign } from "@/lib/db/schema";
 
 const SECTIONS = [
@@ -23,7 +24,14 @@ export function TopBar() {
   const pathname = usePathname();
   const { activeCampaignId, setActiveCampaignId } = useCampaignStore();
   const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen);
+  const encounterStatus = useEncounterStore((s) => s.encounter?.status);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+
+  // Combat focus mode: while running a live encounter, the hub nav is dead
+  // weight competing with the initiative list. Collapse it to a thin strip that
+  // reveals on hover / keyboard focus, giving those pixels back to the fight.
+  const inCombat =
+    (pathname?.startsWith("/encounters/") ?? false) && encounterStatus === "active";
 
   useEffect(() => {
     useCampaignStore.persist.rehydrate();
@@ -63,9 +71,8 @@ export function TopBar() {
     setActiveCampaignId(value);
   }
 
-  return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40 flex-none">
-      <div className="px-4 h-12 flex items-center gap-4">
+  const bar = (
+    <div className="px-4 h-12 flex items-center gap-4">
         <Link href="/" className="flex items-center gap-2 font-bold text-sm text-primary flex-none">
           <Swords className="w-4 h-4" /> HUB
         </Link>
@@ -117,6 +124,36 @@ export function TopBar() {
         >
           <Settings className="w-4 h-4" />
         </Link>
+      </div>
+  );
+
+  if (!inCombat) {
+    return (
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40 flex-none">
+        {bar}
+      </header>
+    );
+  }
+
+  // Collapsed: a thin gold hairline reserves only ~6px; the full bar slides down
+  // as an overlay on hover / focus-within, so revealing it never reflows the
+  // combat list beneath. Keyboard users reach it by tabbing (focus-within).
+  return (
+    <header className="sticky top-0 z-40 flex-none group">
+      <div
+        className="h-1.5 bg-[var(--initiative)]/40 group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity duration-200 motion-reduce:transition-none"
+        aria-hidden
+      />
+      <div
+        className={cn(
+          "absolute inset-x-0 top-0 border-b border-border bg-card backdrop-blur-sm shadow-lg",
+          "-translate-y-full opacity-0 pointer-events-none",
+          "group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto",
+          "group-focus-within:translate-y-0 group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
+          "transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none"
+        )}
+      >
+        {bar}
       </div>
     </header>
   );

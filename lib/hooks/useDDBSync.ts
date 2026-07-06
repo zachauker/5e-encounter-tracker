@@ -7,10 +7,9 @@ import type { DDBCharacter } from "@/lib/types";
 const POLL_INTERVAL_MS = 30_000; // 30 seconds
 
 export function useDDBSync() {
-  const { encounter, updateDDBCharacter } = useEncounterStore();
+  const { encounter, updateDDBCharacter, syncErrors, setSyncErrors } = useEncounterStore();
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [syncErrors, setSyncErrors] = useState<Set<string>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMounted = useRef(true);
 
@@ -60,13 +59,21 @@ export function useDDBSync() {
     }
   }, [ddbPCs, syncing, updateDDBCharacter]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The poll reschedules itself only after the previous refresh settles (so slow
+  // networks never stack overlapping polls). Route the self-call through a ref to
+  // avoid referencing scheduleNext before it's declared.
+  const scheduleNextRef = useRef<() => void>(() => {});
   const scheduleNext = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      if (!document.hidden) refreshAll().finally(scheduleNext);
-      else scheduleNext();
+      if (!document.hidden) refreshAll().finally(() => scheduleNextRef.current());
+      else scheduleNextRef.current();
     }, POLL_INTERVAL_MS);
   }, [refreshAll]);
+
+  useEffect(() => {
+    scheduleNextRef.current = scheduleNext;
+  }, [scheduleNext]);
 
   useEffect(() => {
     function handleVisibility() {

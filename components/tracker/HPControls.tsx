@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { hpColor, hpPercent } from "@/lib/types";
 import { useEncounterStore } from "@/lib/store/encounter-store";
@@ -67,7 +67,7 @@ export function HPControls({ combatantId, hpCurrent, hpMax, hpTemp, compact = fa
           style={{ width: `${pct}%`, backgroundColor: color }}
         />
         <div className="absolute inset-0 flex items-center justify-between px-2">
-          <span className="text-xs font-bold text-white drop-shadow flex items-center gap-1">
+          <span className="text-xs font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.9)] flex items-center gap-1">
             <Heart className="w-3 h-3" />
             {hpCurrent}/{hpMax}
           </span>

@@ -7,8 +7,23 @@ import {
   type Condition,
   CONDITION_COLORS,
   CONDITION_ICONS,
+  CONDITION_RULES,
 } from "@/lib/types";
 import { useEncounterStore } from "@/lib/store/encounter-store";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+
+/** Name + 5e rules text shown on hover, so a DM never reaches for the book mid-fight. */
+function ConditionTooltip({ condition }: { condition: Condition }) {
+  const color = CONDITION_COLORS[condition];
+  return (
+    <TooltipContent side="top" className="max-w-[16rem] px-3 py-2">
+      <p className="font-semibold capitalize mb-0.5" style={{ color }}>
+        {CONDITION_ICONS[condition]} {condition}
+      </p>
+      <p className="text-muted-foreground leading-snug">{CONDITION_RULES[condition]}</p>
+    </TooltipContent>
+  );
+}
 
 const ALL_CONDITIONS: Condition[] = [
   "blinded", "charmed", "deafened", "exhaustion", "frightened",
@@ -27,20 +42,24 @@ function ConditionPill({ condition, active, onClick }: ConditionPillProps) {
   const color = CONDITION_COLORS[condition];
   const icon = CONDITION_ICONS[condition];
   return (
-    <button
-      onClick={onClick}
-      title={condition}
-      className={cn(
-        "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all",
-        active
-          ? "border-current opacity-100"
-          : "border-border bg-muted opacity-60 hover:opacity-90"
-      )}
-      style={active ? { color, borderColor: color, backgroundColor: `${color}22` } : undefined}
-    >
-      <span>{icon}</span>
-      <span className="capitalize">{condition}</span>
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={onClick}
+          className={cn(
+            "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all",
+            active
+              ? "border-current opacity-100"
+              : "border-border bg-muted opacity-60 hover:opacity-90"
+          )}
+          style={active ? { color, borderColor: color, backgroundColor: `${color}22` } : undefined}
+        >
+          <span>{icon}</span>
+          <span className="capitalize">{condition}</span>
+        </button>
+      </TooltipTrigger>
+      <ConditionTooltip condition={condition} />
+    </Tooltip>
   );
 }
 
@@ -55,13 +74,12 @@ export function ConditionDisplay({ conditions, compact = false }: ConditionDispl
     return (
       <div className="flex flex-wrap gap-0.5">
         {conditions.map((c) => (
-          <span
-            key={c}
-            title={c}
-            className="text-sm"
-          >
-            {CONDITION_ICONS[c]}
-          </span>
+          <Tooltip key={c}>
+            <TooltipTrigger asChild>
+              <span className="text-sm cursor-help">{CONDITION_ICONS[c]}</span>
+            </TooltipTrigger>
+            <ConditionTooltip condition={c} />
+          </Tooltip>
         ))}
       </div>
     );
@@ -71,13 +89,17 @@ export function ConditionDisplay({ conditions, compact = false }: ConditionDispl
       {conditions.map((c) => {
         const color = CONDITION_COLORS[c];
         return (
-          <span
-            key={c}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border"
-            style={{ color, borderColor: color, backgroundColor: `${color}22` }}
-          >
-            {CONDITION_ICONS[c]} <span className="capitalize">{c}</span>
-          </span>
+          <Tooltip key={c}>
+            <TooltipTrigger asChild>
+              <span
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border cursor-help"
+                style={{ color, borderColor: color, backgroundColor: `${color}22` }}
+              >
+                {CONDITION_ICONS[c]} <span className="capitalize">{c}</span>
+              </span>
+            </TooltipTrigger>
+            <ConditionTooltip condition={c} />
+          </Tooltip>
         );
       })}
     </div>

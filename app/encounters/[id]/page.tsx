@@ -7,7 +7,7 @@ import { EncounterControls } from "@/components/tracker/EncounterControls";
 import { InitiativeTracker } from "@/components/tracker/InitiativeTracker";
 import { StatBlockPanel } from "@/components/tracker/StatBlockPanel";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle, RefreshCw, X } from "lucide-react";
 import type { EncounterWithCombatants } from "@/lib/types";
 import { useDDBSync } from "@/lib/hooks/useDDBSync";
 
@@ -44,6 +44,51 @@ function UndoToast() {
   );
 }
 
+/**
+ * Persistent, unmissable alarm shown when a save fails. Unlike the ambient
+ * "Save failed" text in the controls bar, this does not auto-dismiss — a lost
+ * save is the one failure a DM must not miss mid-session, so it stays until the
+ * save succeeds or the DM explicitly dismisses it.
+ */
+function SaveErrorToast({
+  message,
+  saving,
+  onRetry,
+  onDismiss,
+}: {
+  message: string;
+  saving: boolean;
+  onRetry: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      aria-live="assertive"
+      className="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-card border border-destructive rounded-lg pl-4 pr-2 py-2.5 shadow-2xl shadow-destructive/20 animate-in fade-in slide-in-from-top-2 duration-200 motion-reduce:animate-none"
+    >
+      <AlertTriangle className="w-4 h-4 text-destructive flex-none" />
+      <div className="text-sm">
+        <span className="font-semibold text-foreground">Encounter not saved</span>
+        <span className="text-muted-foreground"> — {message}</span>
+      </div>
+      <Button size="sm" onClick={onRetry} disabled={saving} className="h-7 text-xs gap-1.5">
+        <RefreshCw className={`w-3 h-3 ${saving ? "animate-spin" : ""}`} />
+        {saving ? "Retrying…" : "Retry"}
+      </Button>
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        onClick={onDismiss}
+        className="flex-none"
+        title="Dismiss"
+      >
+        <X className="w-3.5 h-3.5" />
+      </Button>
+    </div>
+  );
+}
+
 export default function EncounterPage() {
   const params = useParams();
   const router = useRouter();
@@ -55,6 +100,7 @@ export default function EncounterPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     fetch(`/api/encounters/${id}`)
@@ -74,6 +120,11 @@ export default function EncounterPage() {
 
   const save = useCallback(async () => {
     if (!encounter) return;
+    // Cancel any in-flight save so the latest write always wins — rapid HP
+    // edits can otherwise fire overlapping PATCHes that resolve out of order.
+    saveAbortRef.current?.abort();
+    const controller = new AbortController();
+    saveAbortRef.current = controller;
     setSaving(true);
     setSaveError(null);
     try {
@@ -87,15 +138,25 @@ export default function EncounterPage() {
           notes: encounter.notes,
           combatants: encounter.combatants,
         }),
+        signal: controller.signal,
       });
       if (!r.ok) throw new Error(`Server error (${r.status})`);
       markClean();
     } catch (e) {
+      // A newer save superseded this one — not a real failure.
+      if (controller.signal.aborted) return;
       setSaveError(e instanceof Error ? e.message : "Save failed");
     } finally {
-      setSaving(false);
+      // Only the most recent save controls the shared saving state.
+      if (saveAbortRef.current === controller) {
+        saveAbortRef.current = null;
+        setSaving(false);
+      }
     }
   }, [encounter, markClean]);
+
+  // Abort any pending save on unmount so it can't resolve after teardown.
+  useEffect(() => () => saveAbortRef.current?.abort(), []);
 
   // Auto-save when dirty
   useEffect(() => {
@@ -148,6 +209,16 @@ export default function EncounterPage() {
           syncErrors={syncErrors}
         />
       </div>
+
+      {/* Persistent alarm when a save fails — the one failure the DM must not miss */}
+      {saveError && (
+        <SaveErrorToast
+          message={saveError}
+          saving={saving}
+          onRetry={save}
+          onDismiss={() => setSaveError(null)}
+        />
+      )}
 
       {/* Undo toast for combatant removal */}
       <UndoToast />

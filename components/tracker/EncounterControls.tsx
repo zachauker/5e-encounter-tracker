@@ -44,9 +44,14 @@ export function EncounterControls({ onSave, saving, saveError, onNavigateBack }:
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(encounter?.name ?? "");
 
-  useEffect(() => {
+  // Re-sync the draft when the encounter name changes upstream. Done during
+  // render (React's recommended pattern for adjusting state on prop change)
+  // rather than in an effect, which avoids a cascading re-render.
+  const [prevName, setPrevName] = useState(encounter?.name);
+  if (encounter?.name !== prevName) {
+    setPrevName(encounter?.name);
     setNameVal(encounter?.name ?? "");
-  }, [encounter?.name]);
+  }
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -119,12 +124,14 @@ export function EncounterControls({ onSave, saving, saveError, onNavigateBack }:
             </Button>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <div className="group/name flex items-center gap-1.5 flex-1 min-w-0">
             <h1 className="text-sm font-semibold truncate">{encounter.name}</h1>
             <Button
               size="icon-sm"
               variant="ghost"
-              className="flex-none opacity-40 hover:opacity-100 transition-opacity"
+              title="Rename encounter"
+              aria-label="Rename encounter"
+              className="flex-none opacity-0 group-hover/name:opacity-100 focus-visible:opacity-100 transition-opacity"
               onClick={() => setEditingName(true)}
             >
               <Edit2 className="w-3 h-3" />
@@ -218,12 +225,12 @@ export function EncounterControls({ onSave, saving, saveError, onNavigateBack }:
         <div className="flex-1" />
 
         {/* Keyboard hints */}
-        <p className="text-[9px] text-muted-foreground/60 hidden sm:block">
-          <kbd className="px-0.5 rounded bg-muted border border-border text-[8px]">N</kbd>{" "}
-          <kbd className="px-0.5 rounded bg-muted border border-border text-[8px]">P</kbd>{" "}
-          <kbd className="px-0.5 rounded bg-muted border border-border text-[8px]">S</kbd>{" "}
-          <kbd className="px-0.5 rounded bg-muted border border-border text-[8px]">A</kbd>{" "}
-          <kbd className="px-0.5 rounded bg-muted border border-border text-[8px]">⌘S</kbd>
+        <p className="text-[10px] text-muted-foreground hidden sm:flex items-center gap-1">
+          <kbd className="px-1 py-0.5 rounded bg-muted border border-border text-[9px] leading-none">N</kbd>
+          <kbd className="px-1 py-0.5 rounded bg-muted border border-border text-[9px] leading-none">P</kbd>
+          <kbd className="px-1 py-0.5 rounded bg-muted border border-border text-[9px] leading-none">S</kbd>
+          <kbd className="px-1 py-0.5 rounded bg-muted border border-border text-[9px] leading-none">A</kbd>
+          <kbd className="px-1 py-0.5 rounded bg-muted border border-border text-[9px] leading-none">⌘S</kbd>
         </p>
 
         <Button

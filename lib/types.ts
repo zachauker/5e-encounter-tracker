@@ -63,6 +63,48 @@ export const CONDITION_ICONS: Record<Condition, string> = {
   flying: "🦅",
 };
 
+/**
+ * Concise 5e rules text for each condition, surfaced on hover so a DM never
+ * has to reach for the book mid-fight. Kept to the mechanically-relevant
+ * clauses — what changes at the table when this condition is active.
+ */
+export const CONDITION_RULES: Record<Condition, string> = {
+  blinded:
+    "Can't see; auto-fails sight checks. Attacks against it have advantage, its attacks have disadvantage.",
+  charmed:
+    "Can't attack the charmer. The charmer has advantage on social checks with it.",
+  deafened: "Can't hear; auto-fails checks that need hearing.",
+  exhaustion:
+    "Stacking 1–6: disadvantage on checks → half speed → disadvantage on attacks & saves → half HP max → speed 0 → death.",
+  frightened:
+    "While the source is in sight: disadvantage on ability checks and attacks, and it can't willingly move closer.",
+  grappled:
+    "Speed 0. Ends if the grappler is incapacitated or something moves it out of reach.",
+  incapacitated: "Can't take actions or reactions.",
+  invisible:
+    "Unseen without special senses. Attacks against it have disadvantage, its attacks have advantage.",
+  paralyzed:
+    "Incapacitated, can't move or speak. Auto-fails Str & Dex saves. Attacks have advantage; any hit within 5 ft is a crit.",
+  petrified:
+    "Turned to stone: incapacitated and unaware. Resistance to all damage, immune to poison & disease. Attacks have advantage.",
+  poisoned: "Disadvantage on attack rolls and ability checks.",
+  prone:
+    "Can only crawl; disadvantage on attacks. Melee attacks against it have advantage, ranged have disadvantage.",
+  restrained:
+    "Speed 0, disadvantage on Dex saves. Attacks against it have advantage, its attacks have disadvantage.",
+  stunned:
+    "Incapacitated, can't move, speaks haltingly. Auto-fails Str & Dex saves. Attacks against it have advantage.",
+  unconscious:
+    "Incapacitated, drops what it holds, falls prone. Auto-fails Str & Dex saves. Attacks have advantage; hits within 5 ft are crits.",
+  concentration:
+    "Maintaining a spell. On taking damage, make a Con save (DC 10 or half the damage, whichever is higher) or the spell ends.",
+  dodging:
+    "Attacks against it have disadvantage (if it can see them); advantage on Dex saves. Lost if incapacitated or speed 0.",
+  raging:
+    "Advantage on Str checks & saves, bonus melee damage, resistance to bludgeoning/piercing/slashing damage.",
+  flying: "Airborne. Falls if knocked prone, reduced to speed 0, or the effect ends.",
+};
+
 export interface StatBlock {
   name: string;
   size?: string;

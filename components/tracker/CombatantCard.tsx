@@ -9,6 +9,7 @@ import { HPControls } from "./HPControls";
 import { ConditionPicker, ConditionDisplay } from "./ConditionPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Shield,
   Eye,
@@ -19,6 +20,8 @@ import {
   Zap,
   User,
   Sword,
+  AlertTriangle,
+  Edit2,
 } from "lucide-react";
 
 interface CombatantCardProps {
@@ -48,9 +51,11 @@ export function CombatantCard({ combatant: c, isActive, dragHandleProps }: Comba
     updateCombatant,
     selectCombatant,
     selectedCombatantId,
+    syncErrors,
   } = useEncounterStore();
 
   const isSelected = selectedCombatantId === c.id;
+  const isStale = c.type === "pc" && syncErrors.has(c.id);
   const [editingInit, setEditingInit] = useState(false);
   const [initVal, setInitVal] = useState(String(c.initiative ?? ""));
   const [editingName, setEditingName] = useState(false);
@@ -134,7 +139,7 @@ export function CombatantCard({ combatant: c, isActive, dragHandleProps }: Comba
                     ? "bg-[var(--initiative)]/20"
                     : "bg-muted hover:bg-accent"
                 )}
-                title="Click to set initiative"
+                title="Set initiative"
               >
                 <span
                   className={cn(
@@ -149,23 +154,44 @@ export function CombatantCard({ combatant: c, isActive, dragHandleProps }: Comba
           </div>
 
           {/* Avatar */}
-          {c.avatarUrl ? (
-            <img
-              src={c.avatarUrl}
-              alt={c.name}
-              className="w-9 h-9 rounded-full object-cover border border-border flex-none"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : (
-            <div
-              className="w-9 h-9 rounded-full border flex items-center justify-center flex-none text-muted-foreground"
-              style={{ backgroundColor: `${typeColor}18`, borderColor: `${typeColor}44` }}
-            >
-              {TYPE_ICONS[c.type]}
-            </div>
-          )}
+          <div className="relative flex-none">
+            {c.avatarUrl ? (
+              <img
+                src={c.avatarUrl}
+                alt={c.name}
+                className="w-9 h-9 rounded-full object-cover border border-border"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : (
+              <div
+                className="w-9 h-9 rounded-full border flex items-center justify-center text-muted-foreground"
+                style={{ backgroundColor: `${typeColor}18`, borderColor: `${typeColor}44` }}
+              >
+                {TYPE_ICONS[c.type]}
+              </div>
+            )}
+            {/* Stale-data badge: this PC's last D&D Beyond sync failed */}
+            {isStale && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-black ring-2 ring-card cursor-help"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <AlertTriangle className="w-2.5 h-2.5" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[14rem]">
+                  <p className="font-semibold text-amber-400">Stale data</p>
+                  <p className="text-muted-foreground leading-snug">
+                    Last D&amp;D Beyond sync failed — HP and slots may be out of date.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
 
           {/* Name & type */}
           <div className="flex-1 min-w-0">
@@ -184,7 +210,7 @@ export function CombatantCard({ combatant: c, isActive, dragHandleProps }: Comba
               />
             ) : (
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="group/name flex items-center gap-1">
                   <button
                     onDoubleClick={(e) => {
                       e.stopPropagation();
@@ -192,7 +218,7 @@ export function CombatantCard({ combatant: c, isActive, dragHandleProps }: Comba
                       setNameVal(c.name);
                     }}
                     className={cn(
-                      "text-sm font-semibold truncate text-left transition-colors max-w-full",
+                      "text-sm font-semibold truncate text-left transition-colors min-w-0",
                       isActive
                         ? "text-[var(--initiative)]"
                         : "text-foreground hover:text-primary",
@@ -200,6 +226,18 @@ export function CombatantCard({ combatant: c, isActive, dragHandleProps }: Comba
                     )}
                   >
                     {c.name}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingName(true);
+                      setNameVal(c.name);
+                    }}
+                    title="Rename"
+                    aria-label="Rename combatant"
+                    className="flex-none text-muted-foreground/50 hover:text-foreground opacity-0 group-hover/name:opacity-100 focus-visible:opacity-100 transition-opacity"
+                  >
+                    <Edit2 className="w-3 h-3" />
                   </button>
                   {isActive && (
                     <span className="flex-none w-1.5 h-1.5 rounded-full bg-[var(--initiative)] animate-pulse" />

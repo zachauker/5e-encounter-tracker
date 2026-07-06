@@ -15,26 +15,29 @@ interface StatBlockPanelProps {
   syncErrors?: Set<string>;
 }
 
+function formatRelativeTime(date: Date | null): string {
+  if (!date) return "";
+  const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (secs < 10) return "just now";
+  if (secs < 60) return `${secs}s ago`;
+  return `${Math.floor(secs / 60)}m ago`;
+}
+
+/**
+ * Live-updating relative time. The label is derived from `date` during render
+ * (always fresh), and a 10s tick forces a re-render — no state mirroring in an
+ * effect, so no cascading render.
+ */
 function useRelativeTime(date: Date | null): string {
-  const [label, setLabel] = useState("");
+  const [, setTick] = useState(0);
 
   useEffect(() => {
-    if (!date) { setLabel(""); return; }
-
-    function update() {
-      if (!date) return;
-      const secs = Math.floor((Date.now() - date.getTime()) / 1000);
-      if (secs < 10) setLabel("just now");
-      else if (secs < 60) setLabel(`${secs}s ago`);
-      else setLabel(`${Math.floor(secs / 60)}m ago`);
-    }
-
-    update();
-    const id = setInterval(update, 10_000);
+    if (!date) return;
+    const id = setInterval(() => setTick((t) => t + 1), 10_000);
     return () => clearInterval(id);
   }, [date]);
 
-  return label;
+  return formatRelativeTime(date);
 }
 
 export function StatBlockPanel({ onRefresh, lastSyncedAt, syncing, syncErrors }: StatBlockPanelProps) {
@@ -47,10 +50,24 @@ export function StatBlockPanel({ onRefresh, lastSyncedAt, syncing, syncErrors }:
 
   const syncLabel = useRelativeTime(lastSyncedAt ?? null);
 
+  // Esc closes the panel — the close button's tooltip promises this shortcut.
+  // Guard against firing while the DM is typing in a field (notes, HP, name).
+  useEffect(() => {
+    if (!isOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      showStatBlock(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, showStatBlock]);
+
   return (
     <div
       className={cn(
-        "flex flex-col border-l border-border bg-card transition-all duration-300 overflow-hidden",
+        "flex flex-col border-l border-border bg-card transition-[width] duration-300 ease-out overflow-hidden motion-reduce:transition-none",
         isOpen ? "w-80 min-w-80" : "w-0 min-w-0"
       )}
     >
