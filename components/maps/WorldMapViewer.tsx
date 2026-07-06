@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { useCampaignStore } from "@/lib/store/campaign-store";
 import type { ResolvedMarker } from "@/components/maps/map-types";
+import { MarkerLayerControl } from "@/components/maps/MarkerLayerControl";
+import { isMarkerVisible } from "@/components/maps/marker-layers";
 
 const WorldMapCanvas = dynamic(
   () => import("@/components/maps/WorldMapCanvas").then((m) => m.WorldMapCanvas),
@@ -39,6 +41,27 @@ export function WorldMapViewer() {
   const [pending, setPending] = useState<{ x: number; y: number } | null>(null);
   const [editing, setEditing] = useState<ResolvedMarker | null>(null);
   const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+
+  // Load persisted hidden layers once the world map id is known.
+  useEffect(() => {
+    if (!worldMapId || typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(`markerLayers:${worldMapId}`);
+    if (raw) {
+      try {
+        setHidden(new Set(JSON.parse(raw) as string[]));
+      } catch {
+        // ignore malformed storage
+      }
+    }
+  }, [worldMapId]);
+
+  function updateHidden(next: Set<string>) {
+    setHidden(next);
+    if (worldMapId) window.localStorage.setItem(`markerLayers:${worldMapId}`, JSON.stringify([...next]));
+  }
+
+  const visibleMarkers = markers.filter((m) => isMarkerVisible(m, hidden));
 
   const loadMarkers = useCallback(async (mapId: string) => {
     const res = await fetch(`/api/maps/${mapId}/markers`);
@@ -126,6 +149,7 @@ export function WorldMapViewer() {
       <div className="flex items-center justify-between px-6 py-3 border-b border-border flex-none">
         <span className="font-medium text-sm">Exandria — World Map</span>
         <div className="flex items-center gap-2 flex-none">
+          <MarkerLayerControl markers={markers} hidden={hidden} onChange={updateHidden} />
           <select
             value={theme}
             onChange={(e) => changeTheme(e.target.value)}
@@ -153,7 +177,7 @@ export function WorldMapViewer() {
       <div className="relative flex-1 overflow-hidden">
         <WorldMapCanvas
           theme={theme}
-          markers={markers}
+          markers={visibleMarkers}
           selectedId={selectedId}
           addMode={addMode}
           onMapClick={handleMapClick}
