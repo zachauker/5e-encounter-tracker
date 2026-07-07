@@ -45,24 +45,26 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #0f0f11;
-  --foreground: #f2f0eb;
-  --card: #1a1a1f;
-  --card-foreground: #f2f0eb;
-  --border: #2e2e38;
-  --muted: #1e1e26;
-  --muted-foreground: #8a8a9a;
-  --accent: #2a2a36;
-  --accent-foreground: #f2f0eb;
-  --primary: #c0392b;
-  --primary-foreground: #ffffff;
-  --secondary: #1e1e26;
-  --secondary-foreground: #f2f0eb;
-  --destructive: #c0392b;
-  --destructive-foreground: #ffffff;
-  --popover: #1a1a1f;
-  --popover-foreground: #f2f0eb;
-  --ring: #c0392b;
+  /* Ember — warm-tinted near-black surfaces (hue ~46, low chroma) that cohere
+     with the serif type and gold/oxblood accents. A candlelit table, in OKLCH. */
+  --background: oklch(0.155 0.014 46);
+  --foreground: oklch(0.94 0.012 75);
+  --card: oklch(0.205 0.016 46);
+  --card-foreground: oklch(0.94 0.012 75);
+  --border: oklch(0.325 0.02 48);
+  --muted: oklch(0.235 0.016 46);
+  --muted-foreground: oklch(0.705 0.022 60);
+  --accent: oklch(0.3 0.025 48);
+  --accent-foreground: oklch(0.94 0.012 75);
+  --primary: oklch(0.53 0.15 28);
+  --primary-foreground: oklch(0.98 0.01 60);
+  --secondary: oklch(0.235 0.016 46);
+  --secondary-foreground: oklch(0.94 0.012 75);
+  --destructive: oklch(0.575 0.185 25);
+  --destructive-foreground: oklch(0.98 0.01 60);
+  --popover: oklch(0.205 0.016 46);
+  --popover-foreground: oklch(0.94 0.012 75);
+  --ring: oklch(0.53 0.15 28);
   --hp-high: #27ae60;
   --hp-med: #f39c12;
   --hp-low: #c0392b;
@@ -85,7 +87,17 @@
 }
 
 body {
-  background: var(--background);
+  /* Candlelit ambient: a warm ember glow pooled at the top, falling off to the
+     deep surround. A single intentional radial for depth, not decoration. */
+  background:
+    radial-gradient(
+      120% 80% at 50% -12%,
+      oklch(0.26 0.045 52) 0%,
+      oklch(0.185 0.022 48) 42%,
+      var(--background) 72%
+    ),
+    var(--background);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
