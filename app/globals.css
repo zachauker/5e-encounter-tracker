@@ -119,6 +119,62 @@ body {
     drop-shadow(0 0 8px color-mix(in srgb, var(--initiative) 60%, transparent));
 }
 
+/* Marker arrival bloom — a one-shot scale pulse from the pin's tip when it
+   becomes the selected marker (the camera has just flown to it). Plays once on
+   the freshly-mounted selected pin; the global reduced-motion rule neutralizes
+   it. transform-origin is the teardrop point so the pin grows in place. */
+@keyframes marker-bloom {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.marker-bloom {
+  animation: marker-bloom 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: 50% 100%;
+}
+
+/* Marker reveal — pins rise and fade in from their tip as they cross their zoom
+   threshold, instead of popping. A per-pin stagger (set inline) makes a batch
+   cascade in. Global reduced-motion collapses it to an instant appearance. */
+@keyframes marker-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.marker-rise {
+  animation: marker-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: 50% 100%;
+}
+
+/* Detail-card arrival — the selected-location panel settles in as the camera
+   lands, keyed per marker so it re-plays for each selection. Firm ease-out, no
+   overshoot. Global reduced-motion collapses it to an instant appearance. */
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.panel-in {
+  animation: panel-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: top left;
+}
+
 /* Drag-and-drop ghost */
 .combatant-dragging {
   opacity: 0.4;

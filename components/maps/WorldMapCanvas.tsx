@@ -180,12 +180,23 @@ export function WorldMapCanvas({
       }
     }
 
+    let revealIndex = 0; // stagger newly-revealed pins within this batch
     for (const marker of visible) {
       const lngLat: [number, number] = [marker.x, marker.y]; // x=lng, y=lat for world maps
+      const sel = marker.id === selectedId;
       let inst = instances.get(marker.id);
       if (!inst) {
         const el = document.createElement("div");
-        el.innerHTML = renderToStaticMarkup(<MapMarkerPin type={marker.type} selected={marker.id === selectedId} />);
+        el.innerHTML = renderToStaticMarkup(<MapMarkerPin type={marker.type} selected={sel} />);
+        el.dataset.sel = sel ? "1" : "0";
+        // Staggered rise-in for newly-revealed pins (skip the selected one — it
+        // gets the bloom instead, and two transform animations would fight).
+        const pin = el.firstElementChild as HTMLElement | null;
+        if (pin && !sel) {
+          pin.classList.add("marker-rise");
+          pin.style.animationDelay = `${Math.min(revealIndex * 14, 280)}ms`;
+          revealIndex++;
+        }
         el.addEventListener("click", (evt) => {
           evt.stopPropagation();
           markerCbRef.current.onMarkerClick(marker);
@@ -200,9 +211,14 @@ export function WorldMapCanvas({
         instances.set(marker.id, inst);
       } else {
         inst.setLngLat(lngLat);
-        inst.getElement().innerHTML = renderToStaticMarkup(
-          <MapMarkerPin type={marker.type} selected={marker.id === selectedId} />
-        );
+        // Only regenerate the pin markup when its selected state actually flips.
+        // This stops per-zoom churn (a perf win) and lets the freshly-mounted
+        // selected pin play its one-shot arrival bloom exactly once.
+        const el = inst.getElement();
+        if (el.dataset.sel !== (sel ? "1" : "0")) {
+          el.innerHTML = renderToStaticMarkup(<MapMarkerPin type={marker.type} selected={sel} />);
+          el.dataset.sel = sel ? "1" : "0";
+        }
       }
     }
   }, [markers, selectedId, ready, zoom]);
@@ -211,6 +227,39 @@ export function WorldMapCanvas({
   useEffect(() => {
     for (const inst of markerInstancesRef.current.values()) inst.setDraggable(markersDraggable);
   }, [markersDraggable, markers, zoom, ready]);
+
+  // Cinematic fly-to: when a marker is selected, glide the camera to it (and
+  // zoom in enough to reveal it) instead of a hard jump. Guarded by a ref so it
+  // fires once per selection even as markers stream in; reduced-motion jumps.
+  const lastFlownRef = useRef<string | null>(null);
+  useEffect(() => {
+    const glMap = glMapRef.current;
+    if (!glMap || !ready) return;
+    if (!selectedId) {
+      lastFlownRef.current = null;
+      return;
+    }
+    if (selectedId === lastFlownRef.current) return;
+    const m = markers.find((mk) => mk.id === selectedId);
+    if (!m) return;
+    lastFlownRef.current = selectedId;
+    const center: [number, number] = [m.x, m.y];
+    const targetZoom = Math.max(glMap.getZoom(), m.minZoom ?? 6);
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      glMap.jumpTo({ center, zoom: targetZoom });
+    } else {
+      glMap.flyTo({
+        center,
+        zoom: targetZoom,
+        curve: 1.42,
+        speed: 0.85,
+        easing: (t) => 1 - Math.pow(1 - t, 4),
+      });
+    }
+  }, [selectedId, ready, markers]);
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-black/40">

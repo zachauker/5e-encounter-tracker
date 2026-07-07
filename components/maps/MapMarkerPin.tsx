@@ -16,7 +16,7 @@ export function MapMarkerPin({ type, selected }: { type: MapMarker["type"]; sele
   const meta = MARKER_META[type] ?? MARKER_META.note;
   const Icon = meta.icon;
   return (
-    <div className={cn("relative", selected && "marker-selected")}>
+    <div className={cn("relative", selected && "marker-selected marker-bloom")}>
       <svg width="28" height="36" viewBox="0 0 28 36" className="drop-shadow-md">
         <path
           d="M14 0C6.3 0 0 6.3 0 14c0 9.6 14 22 14 22s14-12.4 14-22c0-7.7-6.3-14-14-14z"

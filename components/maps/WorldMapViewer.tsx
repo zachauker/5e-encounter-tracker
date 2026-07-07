@@ -277,7 +277,10 @@ export function WorldMapViewer() {
         )}
 
         {selectedMarker && (
-          <div className="absolute top-4 left-4 w-64 rounded-lg border border-border bg-card p-3 shadow-xl space-y-2 z-[1000]">
+          <div
+            key={selectedMarker.id}
+            className="panel-in absolute top-4 left-4 w-64 rounded-lg border border-border bg-card p-3 shadow-xl space-y-2 z-[1000]"
+          >
             <div className="flex items-start justify-between gap-2">
               <div>
                 <div className="font-medium text-sm">{selectedMarker.resolvedTitle}</div>
