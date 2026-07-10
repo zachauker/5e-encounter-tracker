@@ -89,6 +89,10 @@ export const locations = sqliteTable("locations", {
   notionUrl: text("notion_url"),
   description: text("description"),
   type: text("type", { enum: ["city", "town", "poi", "region", "other"] }).notNull().default("other"),
+  notionPageId: text("notion_page_id"),
+  notionProps: text("notion_props"),
+  archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+  notionSyncedAt: integer("notion_synced_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
