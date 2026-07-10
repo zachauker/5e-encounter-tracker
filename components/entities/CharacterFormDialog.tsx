@@ -83,9 +83,9 @@ export function CharacterFormDialog({
       fetch("/api/items").then((r) => r.json()),
     ])
       .then(([f, l, i]) => {
-        setFactions(f);
+        setFactions(f.items);
         setLocations(l);
-        setItems(i);
+        setItems(i.items);
       })
       .catch(() => {
         // Relationship lookups are optional for the form; leave lists empty on failure.
