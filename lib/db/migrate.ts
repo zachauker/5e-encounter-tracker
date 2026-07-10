@@ -1,9 +1,8 @@
 import Database from "better-sqlite3";
 import path from "path";
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "encounter-tracker.db");
-
 export function runMigrations() {
+  const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "encounter-tracker.db");
   const sqlite = new Database(DB_PATH);
   sqlite.pragma("foreign_keys = ON");
 
