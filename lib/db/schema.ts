@@ -129,7 +129,7 @@ export const notionSources = sqliteTable(
   "notion_sources",
   {
     campaignId: text("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
-    entityType: text("entity_type", { enum: ["characters", "items", "factions"] }).notNull(),
+    entityType: text("entity_type", { enum: ["characters", "items", "factions", "locations"] }).notNull(),
     databaseUrl: text("database_url").notNull(),
     dataSourceId: text("data_source_id"),
     lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
