@@ -18,6 +18,7 @@ export type CharacterWithLinks = Character & {
   locationIds: string[];
   itemIds: string[];
   mapMarkers: { mapId: string; mapName: string; markerId: string; renderMode: "static" | "tiled" | "world" }[];
+  notionProps?: { label: string; value: string }[];
 };
 
 interface CharacterFormDialogProps {
