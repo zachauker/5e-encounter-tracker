@@ -26,6 +26,7 @@ const SECTIONS = [
 export function TopBar() {
   const pathname = usePathname();
   const { activeCampaignId, setActiveCampaignId } = useCampaignStore();
+  const campaignsVersion = useCampaignStore((s) => s.campaignsVersion);
   const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen);
   const encounterStatus = useEncounterStore((s) => s.encounter?.status);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -56,9 +57,10 @@ export function TopBar() {
           setActiveCampaignId(data[0].id);
         }
       });
-    // Only run once on mount — activeCampaignId changes shouldn't refetch the list.
+    // Re-fetch when the campaign list changes (create/rename bumps the version);
+    // activeCampaignId changes alone shouldn't refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [campaignsVersion]);
 
   function handleCampaignChange(value: string) {
     if (value === "__new__") {

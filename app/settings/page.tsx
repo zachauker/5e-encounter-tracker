@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Check, Loader2, Plus, Trash2, User, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCampaignStore } from "@/lib/store/campaign-store";
 
 interface SavedCharacterUrl {
   id: string;
@@ -15,6 +16,8 @@ interface SavedCharacterUrl {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const activeCampaignId = useCampaignStore((s) => s.activeCampaignId);
+  const bumpCampaigns = useCampaignStore((s) => s.bumpCampaigns);
   const [campaignName, setCampaignName] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -30,22 +33,39 @@ export default function SettingsPage() {
     fetch("/api/settings")
       .then((r) => r.json())
       .then((data) => {
-        setCampaignName(data.campaign_name ?? "");
         try { setShareUrls(JSON.parse(data.ddb_share_urls ?? "[]")); } catch {}
         setNotionConfigured(Boolean(data.notion_token));
       });
   }, []);
 
+  // The campaign name is the active campaign's real name (campaigns.name), the
+  // same source the TopBar and dashboard read — not a separate global setting.
+  useEffect(() => {
+    if (!activeCampaignId) return;
+    fetch("/api/campaigns")
+      .then((r) => r.json())
+      .then((cs: { id: string; name: string }[]) => {
+        setCampaignName(cs.find((c) => c.id === activeCampaignId)?.name ?? "");
+      })
+      .catch(() => {});
+  }, [activeCampaignId]);
+
   async function save() {
     setSaving(true);
     try {
+      if (activeCampaignId) {
+        await fetch(`/api/campaigns/${activeCampaignId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: campaignName }),
+        });
+        // Tell the persistent TopBar / dashboard to re-fetch the renamed campaign.
+        bumpCampaigns();
+      }
       await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          campaign_name: campaignName,
-          ddb_share_urls: JSON.stringify(shareUrls),
-        }),
+        body: JSON.stringify({ ddb_share_urls: JSON.stringify(shareUrls) }),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
