@@ -3,9 +3,10 @@ import type { AppDb } from "./read-tools";
 import { buildTools } from "./tools";
 
 export interface AssistantEvent {
-  type: "text" | "proposal" | "done" | "error";
+  type: "text" | "proposal" | "citations" | "done" | "error";
   text?: string;
   proposal?: unknown;
+  citations?: { sourceRef: string; collection: string }[];
   message?: string;
 }
 
@@ -19,9 +20,12 @@ type AgentTool = ReturnType<typeof buildTools>[number];
 
 /**
  * Wrap every tool's `run` so that, in addition to returning its normal result to
- * the model, any `{proposal}` it produces is also pushed into `sink`.
+ * the model, any `{proposal}` it produces is also pushed into `proposalSink`,
+ * and any `search_reference` result (a JSON array of `{content, sourceRef,
+ * collection, distance}` hits) has its `{sourceRef, collection}` pairs pushed
+ * into `citationSink` (deduped by `sourceRef`).
  *
- * Why this exists instead of reading proposals back off the accumulated
+ * Why this exists instead of reading results back off the accumulated
  * transcript: `BetaToolRunner` (client.beta.messages.toolRunner) has no public
  * `.messages` accessor — the real accessor for the accumulated conversation is
  * the `runner.params.messages` getter (`BetaToolRunner#params`), which returns
@@ -31,10 +35,14 @@ type AgentTool = ReturnType<typeof buildTools>[number];
  * (currently a raw JSON string, not a content-block array) and to a
  * ToolRunner internal that isn't part of its documented public surface.
  * Decorating the tools' `run` functions here is simpler, doesn't require
- * touching tools.ts, and captures a proposal the moment it's produced instead
- * of re-deriving it from serialized tool output.
+ * touching tools.ts, and captures a proposal/citation the moment it's produced
+ * instead of re-deriving it from serialized tool output.
  */
-function withProposalCapture(tools: AgentTool[], sink: unknown[]): AgentTool[] {
+function withCapture(
+  tools: AgentTool[],
+  proposalSink: unknown[],
+  citationSink: { sourceRef: string; collection: string }[],
+): AgentTool[] {
   return tools.map((tool) => {
     const originalRun = tool.run as (args: unknown, context?: unknown) => unknown;
     const run = async (args: unknown, context?: unknown) => {
@@ -43,10 +51,16 @@ function withProposalCapture(tools: AgentTool[], sink: unknown[]): AgentTool[] {
         try {
           const parsed = JSON.parse(result);
           if (parsed && typeof parsed === "object" && "proposal" in parsed && parsed.proposal != null) {
-            sink.push(parsed.proposal);
+            proposalSink.push(parsed.proposal);
+          } else if (tool.name === "search_reference" && Array.isArray(parsed)) {
+            for (const hit of parsed as { sourceRef?: string; collection?: string }[]) {
+              if (hit.sourceRef && !citationSink.some((c) => c.sourceRef === hit.sourceRef)) {
+                citationSink.push({ sourceRef: hit.sourceRef, collection: hit.collection ?? "" });
+              }
+            }
           }
         } catch {
-          // Not JSON (or not a proposal-shaped tool result) — nothing to capture.
+          // Not JSON (or not a proposal/citation-shaped tool result) — nothing to capture.
         }
       }
       return result;
@@ -61,7 +75,8 @@ export async function runAssistant(
 ): Promise<void> {
   const client = new Anthropic({ apiKey: opts.apiKey });
   const proposals: unknown[] = [];
-  const tools = withProposalCapture(buildTools(opts.db, opts.campaignId), proposals);
+  const citations: { sourceRef: string; collection: string }[] = [];
+  const tools = withCapture(buildTools(opts.db, opts.campaignId), proposals, citations);
 
   const runner = client.beta.messages.toolRunner({
     model: "claude-opus-4-8",
@@ -94,6 +109,10 @@ export async function runAssistant(
     onEvent({ type: "text", text: "I can't help with that." });
   } else if (!emittedText) {
     onEvent({ type: "text", text: "I wasn't able to produce an answer — try rephrasing." });
+  }
+
+  if (citations.length) {
+    onEvent({ type: "citations", citations });
   }
 
   for (const proposal of proposals) {

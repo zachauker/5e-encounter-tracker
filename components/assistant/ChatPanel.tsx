@@ -27,6 +27,7 @@ export function ChatPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [notices, setNotices] = useState<string[]>([]);
+  const [citations, setCitations] = useState<{ sourceRef: string; collection: string }[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const consumed = useRef<string | null>(null);
@@ -37,6 +38,7 @@ export function ChatPanel() {
     setMessages([...nextMsgs, { role: "assistant", content: "" }]);
     setProposals([]);
     setNotices([]);
+    setCitations([]);
     setBusy(true);
     try {
       const res = await fetch("/api/assistant", {
@@ -75,6 +77,7 @@ export function ChatPanel() {
             type: string;
             text?: string;
             proposal?: Proposal;
+            citations?: { sourceRef: string; collection: string }[];
             message?: string;
           };
           if (evt.type === "text" && evt.text) {
@@ -86,6 +89,8 @@ export function ChatPanel() {
             });
           } else if (evt.type === "proposal" && evt.proposal) {
             setProposals((p) => [...p, evt.proposal!]);
+          } else if (evt.type === "citations") {
+            setCitations(evt.citations ?? []);
           } else if (evt.type === "error") {
             assistantText += `\n\n⚠️ ${evt.message ?? "error"}`;
             setMessages((m) => {
@@ -145,6 +150,19 @@ export function ChatPanel() {
             </div>
           </div>
         ))}
+        {citations.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {citations.map((c, i) => (
+              <span
+                key={i}
+                className="rounded border border-border bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
+                title={c.collection}
+              >
+                {c.sourceRef}
+              </span>
+            ))}
+          </div>
+        )}
         {proposals.map((p, i) => (
           <div key={`p${i}`} className="rounded-lg border border-border p-3 text-sm">
             <p className="mb-2">{p.summary}</p>
