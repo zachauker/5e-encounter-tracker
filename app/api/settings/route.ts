@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-const ALLOWED_KEYS = ["campaign_name", "default_roll_advantage", "ddb_share_urls", "notion_token"];
-const MASKED_KEYS = new Set(["ddb_cobalt_token", "notion_token"]);
+const ALLOWED_KEYS = ["campaign_name", "default_roll_advantage", "ddb_share_urls", "notion_token", "anthropic_api_key"];
+const MASKED_KEYS = new Set(["ddb_cobalt_token", "notion_token", "anthropic_api_key"]);
 
 export async function GET() {
   const rows = await db.query.settings.findMany();
