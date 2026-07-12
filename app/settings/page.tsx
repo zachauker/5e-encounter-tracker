@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useCampaignStore } from "@/lib/store/campaign-store";
 import { NotionSyncPanel } from "@/components/settings/NotionSyncPanel";
 import { AssistantPanel } from "@/components/settings/AssistantPanel";
+import { ReferenceLibraryPanel } from "@/components/settings/ReferenceLibraryPanel";
 
 interface SavedCharacterUrl {
   id: string;
@@ -277,6 +278,9 @@ export default function SettingsPage() {
 
         {/* Campaign Assistant */}
         <AssistantPanel />
+
+        {/* Reference Library */}
+        <ReferenceLibraryPanel />
 
         <Button onClick={save} disabled={saving} className="gap-1.5 w-full">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}
