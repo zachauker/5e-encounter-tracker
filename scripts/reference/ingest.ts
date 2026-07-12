@@ -9,7 +9,6 @@ import { loadVec } from "@/lib/db/load-vec";
 import { runMigrations } from "@/lib/db/migrate";
 import { chunkText, type Chunk } from "@/lib/reference/chunk";
 import { embed, EMBED_DIMS } from "@/lib/reference/embed";
-import { upsertVectors } from "@/lib/reference/retrieve";
 import { eq } from "drizzle-orm";
 
 interface TextItemLike { str?: string }
@@ -43,9 +42,11 @@ async function main() {
   const [file, ...rest] = process.argv.slice(2);
   const collFlag = rest.indexOf("--collection");
   const name = collFlag >= 0 ? rest[collFlag + 1] : path.basename(file ?? "");
+  const labelFlag = rest.indexOf("--label");
+  const labelOverride = labelFlag >= 0 ? rest[labelFlag + 1] : undefined;
   const replace = rest.includes("--replace");
   const dryRun = rest.includes("--dry-run");
-  if (!file) { console.error("usage: tsx scripts/reference/ingest.ts <file> --collection \"<name>\" [--replace] [--dry-run]"); process.exit(1); }
+  if (!file) { console.error("usage: tsx scripts/reference/ingest.ts <file> --collection \"<name>\" [--label \"<citation label>\"] [--replace] [--dry-run]"); process.exit(1); }
   const sourceType = path.extname(file).toLowerCase() === ".pdf" ? "pdf" : "text";
 
   runMigrations();
@@ -58,7 +59,10 @@ async function main() {
   const existing = db.select().from(referenceCollections).where(eq(referenceCollections.name, name)).get();
   if (existing && !replace) { console.error(`Collection "${name}" exists. Pass --replace to overwrite.`); process.exit(1); }
 
-  const { text, pageOf, sourceLabel } = await extract(file);
+  const { text, pageOf, sourceLabel: derivedLabel } = await extract(file);
+  // --label overrides the filename-derived citation label (e.g. import-srd feeds a
+  // temp ".srd-combined.md", which would otherwise cite as ".srd-combined: …").
+  const sourceLabel = labelOverride ?? derivedLabel;
   const chunks: Chunk[] = chunkText(text, { sourceLabel, pageOf });
   if (chunks.length === 0) { console.error("No text extracted — nothing to ingest."); process.exit(1); }
   console.log(`Parsed ${chunks.length} chunks from ${file}.`);
@@ -75,6 +79,10 @@ async function main() {
   }
 
   const collId = existing?.id ?? crypto.randomUUID();
+  // Chunks AND their vectors must be written atomically: a crash between them
+  // would leave a populated-looking collection with missing/partial vectors.
+  // Embeddings are already computed, and the vec INSERTs are synchronous, so
+  // they run inside the same synchronous transaction as the chunk rows.
   const tx = sqlite.transaction(() => {
     if (existing) {
       // cascade deletes chunks; also clear their vectors
@@ -85,10 +93,14 @@ async function main() {
     db.insert(referenceCollections).values({ id: collId, name, sourceType, enabled: true, chunkCount: chunks.length, createdAt: new Date() }).run();
     const chunkRows = chunks.map((c) => ({ id: crypto.randomUUID(), collectionId: collId, content: c.content, sourceRef: c.sourceRef, ordinal: c.ordinal, tokenCount: c.tokenCount }));
     for (const row of chunkRows) db.insert(referenceChunks).values(row).run();
-    return chunkRows;
+    for (let i = 0; i < chunkRows.length; i++) {
+      const emb = embeddings[i];
+      if (emb.length !== EMBED_DIMS) throw new Error(`embedding dim ${emb.length} != ${EMBED_DIMS}`);
+      // vec0 virtual tables reject ON CONFLICT upsert; INSERT OR REPLACE works.
+      sqlite.prepare("INSERT OR REPLACE INTO vec_reference_chunks(chunk_id, embedding) VALUES (?, ?)").run(chunkRows[i].id, JSON.stringify(emb));
+    }
   });
-  const chunkRows = tx();
-  await upsertVectors(db, chunkRows.map((r, i) => ({ chunkId: r.id, embedding: embeddings[i] })), EMBED_DIMS);
+  tx();
   console.log(`Ingested "${name}" — ${chunks.length} chunks.`);
 }
 

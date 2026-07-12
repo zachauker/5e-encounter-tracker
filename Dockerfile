@@ -18,7 +18,7 @@ RUN test -f world-data/build/styles/themes.json || \
 # the repo (not git-ignored) and baked into the runtime image below, so it must be present
 # in the build context. Fail fast with instructions rather than shipping an image whose
 # reference search has no local model.
-RUN test -d reference-data/models || \
+RUN test -f reference-data/models/Xenova/bge-small-en-v1.5/config.json || \
   (echo "ERROR: reference-data/models missing — run 'REFERENCE_MODEL_DIR=reference-data/models npx tsx scripts/reference/fetch-model.ts' and commit the weights (see reference-data/DEPLOY.md)" && exit 1)
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build

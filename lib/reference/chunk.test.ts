@@ -39,4 +39,20 @@ describe("chunkText", () => {
     });
     expect(chunks[0].sourceRef).toBe("EGtW p.142");
   });
+
+  it("labels each chunk of a headingless section by its OWN char offset, not the section start", () => {
+    // A headingless PDF is one section (startIndex 0). Per-piece page derivation
+    // must give later chunks a later page — not p.1 for every chunk.
+    const body = Array.from({ length: 80 }, (_, i) => `Word${i}`).join(" ");
+    const chunks = chunkText(body, {
+      sourceLabel: "EGtW",
+      maxTokens: 40,
+      overlapTokens: 0,
+      pageOf: (i) => (i < 100 ? 1 : 2),
+    });
+    expect(chunks.length).toBeGreaterThan(1);
+    const pages = new Set(chunks.map((c) => c.sourceRef));
+    expect(pages.has("EGtW p.1")).toBe(true);
+    expect(pages.has("EGtW p.2")).toBe(true);
+  });
 });

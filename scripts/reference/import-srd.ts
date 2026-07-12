@@ -15,7 +15,7 @@ const combined = files.map((f) => fs.readFileSync(path.join(dir, f), "utf8")).jo
 const tmp = path.join(dir, ".srd-combined.md");
 fs.writeFileSync(tmp, combined);
 try {
-  execFileSync("npx", ["tsx", "scripts/reference/ingest.ts", tmp, "--collection", "SRD 5.1", "--replace"], { stdio: "inherit" });
+  execFileSync("npx", ["tsx", "scripts/reference/ingest.ts", tmp, "--collection", "SRD 5.1", "--label", "SRD", "--replace"], { stdio: "inherit" });
 } finally {
   fs.unlinkSync(tmp);
 }

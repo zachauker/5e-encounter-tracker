@@ -45,4 +45,22 @@ describe("searchReference", () => {
     const hits = await searchReference(db, { query: "grapple", embed: stub, k: 5, dims: DIMS });
     expect(hits.find((h) => h.collection === "Disabled")).toBeUndefined();
   });
+
+  it("returns an enabled match even when the NEAREST chunk is in a disabled collection", async () => {
+    const { db } = createTestDb();
+    seed(db);
+    // Disabled chunk c3 is an EXACT match for the query (distance 0); enabled
+    // chunk c1 is a real-but-farther match (same axis, half magnitude). If the
+    // enabled filter were applied after the KNN limit, k=1 would spend its one
+    // slot on c3 and return empty. Over-fetching must surface c1 instead.
+    const near = pad([1, 0, 0]);
+    const far = pad([0.5, 0, 0]);
+    await upsertVectors(db, [
+      { chunkId: "c3", embedding: near }, // disabled, nearest
+      { chunkId: "c1", embedding: far },  // enabled, farther but real
+    ], DIMS);
+    const hits = await searchReference(db, { query: "grapple", embed: stub, k: 1, dims: DIMS });
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({ sourceRef: "SRD: Grappling", collection: "SRD 5.1" });
+  });
 });

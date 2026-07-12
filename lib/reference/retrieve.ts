@@ -26,15 +26,23 @@ export async function searchReference(
     throw new Error(`embedding dim ${queryVec.length} != ${opts.dims}`);
   }
   const json = JSON.stringify(queryVec);
+  // vec0 applies the `k =` KNN limit BEFORE any join filter, so filtering on
+  // col.enabled/col.name in the outer query can drop rows the KNN already spent,
+  // yielding fewer than k (or zero) results even when good enabled matches exist.
+  // Over-fetch KNN candidates first, then filter + limit around them.
+  const overfetch = Math.max(k * 8, 50);
   const rows = db.all(sql`
     SELECT rc.content AS content, rc.source_ref AS sourceRef, col.name AS collection, v.distance AS distance
-    FROM vec_reference_chunks v
+    FROM (
+      SELECT chunk_id AS chunk_id, distance AS distance FROM vec_reference_chunks
+      WHERE embedding MATCH ${json} AND k = ${overfetch}
+    ) v
     JOIN reference_chunks rc ON rc.id = v.chunk_id
     JOIN reference_collections col ON col.id = rc.collection_id
-    WHERE v.embedding MATCH ${json} AND k = ${k}
-      AND col.enabled = 1
+    WHERE col.enabled = 1
       ${opts.collection ? sql`AND col.name = ${opts.collection}` : sql``}
     ORDER BY v.distance
+    LIMIT ${k}
   `) as RefHit[];
   return rows;
 }
