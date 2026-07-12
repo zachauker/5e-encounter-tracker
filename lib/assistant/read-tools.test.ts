@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { createTestDb } from "@/lib/notion/test-helpers";
 import { characters, factions, locations, items, characterFactions, characterLocations, characterItems } from "@/lib/db/schema";
 import { searchEntities, listEntities, getEntity, getRelationships } from "./read-tools";
+import { monsterCache, maps, mapMarkers } from "@/lib/db/schema";
+import { listMonsters, getMapContext } from "./read-tools";
 
 function seedChar(db: ReturnType<typeof createTestDb>["db"], campaignId: string, over: Partial<typeof characters.$inferInsert> & { id: string; name: string }) {
   const now = new Date();
@@ -84,5 +86,31 @@ describe("getEntity + getRelationships", () => {
     db.insert(characterFactions).values({ characterId: "c1", factionId: "f1" }).run();
 
     expect(getRelationships(db, "other-campaign", { kind: "faction", id: "f1" })).toEqual({ characters: [] });
+  });
+});
+
+describe("listMonsters", () => {
+  it("matches cached monsters by name (global cache, not campaign-scoped)", () => {
+    const { db } = createTestDb();
+    db.insert(monsterCache).values({ slug: "goblin", name: "Goblin", data: JSON.stringify({ challenge_rating: "1/4" }), cachedAt: new Date() }).run();
+    const hits = listMonsters(db, { query: "gob" });
+    expect(hits[0]).toMatchObject({ slug: "goblin", name: "Goblin", cr: "1/4" });
+  });
+});
+
+describe("getMapContext", () => {
+  it("returns markers for a campaign's map", () => {
+    const { db, campaignId } = createTestDb();
+    db.insert(maps).values({ id: "m1", campaignId, name: "World", imagePath: "x", renderMode: "world", createdAt: new Date(), updatedAt: new Date() }).run();
+    db.insert(mapMarkers).values({ id: "mk1", mapId: "m1", x: 1, y: 2, type: "location", title: "Nicodranas", createdAt: new Date(), updatedAt: new Date() }).run();
+    const ctx = getMapContext(db, campaignId, { mapId: "m1" });
+    expect(ctx.map?.name).toBe("World");
+    expect(ctx.markers.map((mk) => mk.title)).toEqual(["Nicodranas"]);
+  });
+
+  it("returns null map for another campaign's map id (scoped)", () => {
+    const { db, campaignId } = createTestDb();
+    db.insert(maps).values({ id: "m1", campaignId, name: "World", imagePath: "x", createdAt: new Date(), updatedAt: new Date() }).run();
+    expect(getMapContext(db, "other", { mapId: "m1" }).map).toBeNull();
   });
 });

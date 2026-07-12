@@ -2,6 +2,7 @@ import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { and, eq, like } from "drizzle-orm";
 import * as schema from "@/lib/db/schema";
 import { characters, locations, items, factions, characterFactions, characterLocations, characterItems } from "@/lib/db/schema";
+import { monsterCache, maps, mapMarkers } from "@/lib/db/schema";
 
 export type AppDb = BetterSQLite3Database<typeof schema>;
 export type EntityKind = "character" | "location" | "item" | "faction";
@@ -52,4 +53,21 @@ export function getRelationships(db: AppDb, campaignId: string, input: { kind: E
     .filter((c): c is NonNullable<typeof c> => Boolean(c) && !c!.archived)
     .map((c) => ({ id: c.id, name: c.name, type: c.type }));
   return { characters: chars };
+}
+
+export function listMonsters(db: AppDb, input: { query: string }) {
+  const q = `%${input.query.trim().toLowerCase()}%`;
+  return db.select().from(monsterCache).where(like(monsterCache.name, q)).all().map((r) => {
+    let cr: string | null = null;
+    try { cr = (JSON.parse(r.data) as { challenge_rating?: string }).challenge_rating ?? null; } catch { /* ignore */ }
+    return { slug: r.slug, name: r.name, cr };
+  });
+}
+
+export function getMapContext(db: AppDb, campaignId: string, input: { mapId: string }) {
+  const map = db.select().from(maps).where(and(eq(maps.campaignId, campaignId), eq(maps.id, input.mapId))).get() ?? null;
+  if (!map) return { map: null, markers: [] as { id: string; type: string; title: string | null; entityId: string | null }[] };
+  const markers = db.select().from(mapMarkers).where(eq(mapMarkers.mapId, map.id)).all()
+    .map((m) => ({ id: m.id, type: m.type, title: m.title, entityId: m.entityId }));
+  return { map: { id: map.id, name: map.name, renderMode: map.renderMode }, markers };
 }
