@@ -366,7 +366,7 @@ export interface Proposal {
 // Only these fields may be written per entity kind. Notion-synced columns
 // (type on locations, description on items, notionProps, etc.) are deliberately absent.
 const HUB_AUTHORED: Record<EntityKind, string[]> = {
-  character: ["name", "type", "description", "ddbCharacterId", "notionUrl"],
+  character: ["name", "description", "notionUrl"], // NOT `type`/`ddbCharacterId` — both Notion-sync-managed (mapCharacterRow writes them); new NPCs default to `npc` in the POST route
   location: ["name", "description", "notionUrl"], // NOT `type` — world-derived, drives map layering
   item: ["name", "notionUrl"],                    // NOT `description` — synced from Notion
   faction: ["name", "description", "notionUrl"],
@@ -1037,4 +1037,6 @@ git commit -m "feat: ⌘K 'Ask the assistant' action opens the chat panel"
 - **SDK surface drift:** the Tool Runner is a beta helper. If `betaZodTool`, `client.beta.messages.toolRunner`, or `runner.messages` don't match the installed `@anthropic-ai/sdk` version, check `node_modules/@anthropic-ai/sdk/helpers/beta/` and `.../resources/beta/messages/` for the exact names — the plan's structure holds; only the accessor names may shift.
 - **No `level` column:** `characters` has no level field (`type` is only `pc|npc`). "Level 5+" style filters aren't a direct column query — the agent leans on `description`/`notionProps`. Don't add a level filter to `list_entities`.
 - **Single transaction boundary:** never have a proposal write directly to the DB. All writes go through the existing routes so their validation, FK handling, and sync-field guards apply unchanged.
+- **Encounters route accepts combatants:** Task 4 extended `POST /api/encounters` to insert an optional `body.combatants[]` in the same handler (backward-compatible), so the single-call encounter proposal actually creates the combatants it promises. The Task 9 smoke test verifies this end-to-end.
+- **Character `type`/`ddbCharacterId` are sync-managed:** the review of Task 4 corrected the plan — these were removed from the character allowlist. New assistant-created NPCs default to `npc` via the characters POST route; PC typing and D&D Beyond links come from their proper flows, not the assistant.
 - **Custom Next.js fork:** read `node_modules/next/dist/docs/` before the route (Task 6) and layout (Task 8) changes.
