@@ -194,6 +194,24 @@ export const mapMarkers = sqliteTable("map_markers", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
+export const referenceCollections = sqliteTable("reference_collections", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  sourceType: text("source_type", { enum: ["srd", "pdf", "text"] }).notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  chunkCount: integer("chunk_count").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+export const referenceChunks = sqliteTable("reference_chunks", {
+  id: text("id").primaryKey(),
+  collectionId: text("collection_id").notNull().references(() => referenceCollections.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  sourceRef: text("source_ref").notNull(),
+  ordinal: integer("ordinal").notNull(),
+  tokenCount: integer("token_count").notNull(),
+});
+
 export type Encounter = typeof encounters.$inferSelect;
 export type NewEncounter = typeof encounters.$inferInsert;
 export type Combatant = typeof combatants.$inferSelect;
@@ -218,3 +236,7 @@ export type MapRow = typeof maps.$inferSelect;
 export type NewMapRow = typeof maps.$inferInsert;
 export type MapMarker = typeof mapMarkers.$inferSelect;
 export type NewMapMarker = typeof mapMarkers.$inferInsert;
+export type ReferenceCollection = typeof referenceCollections.$inferSelect;
+export type NewReferenceCollection = typeof referenceCollections.$inferInsert;
+export type ReferenceChunk = typeof referenceChunks.$inferSelect;
+export type NewReferenceChunk = typeof referenceChunks.$inferInsert;

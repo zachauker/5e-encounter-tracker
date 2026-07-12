@@ -178,6 +178,24 @@ export function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_maps_campaign ON maps(campaign_id);
     CREATE INDEX IF NOT EXISTS idx_maps_parent ON maps(parent_map_id);
     CREATE INDEX IF NOT EXISTS idx_map_markers_map ON map_markers(map_id);
+
+    CREATE TABLE IF NOT EXISTS reference_collections (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      source_type TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      chunk_count INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS reference_chunks (
+      id TEXT PRIMARY KEY,
+      collection_id TEXT NOT NULL REFERENCES reference_collections(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      source_ref TEXT NOT NULL,
+      ordinal INTEGER NOT NULL,
+      token_count INTEGER NOT NULL
+    );
   `);
 
   // Additive migrations (idempotent ALTER TABLE)
@@ -230,6 +248,16 @@ export function runMigrations() {
   sqlite
     .prepare("UPDATE encounters SET campaign_id = ? WHERE campaign_id IS NULL")
     .run(defaultCampaignId);
+
+  // Vector table for reference search — requires sqlite-vec (loaded above).
+  try {
+    sqlite.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS vec_reference_chunks USING vec0(
+      chunk_id TEXT PRIMARY KEY,
+      embedding float[384]
+    );`);
+  } catch (err) {
+    console.warn("[migrate] sqlite-vec unavailable — reference search disabled:", (err as Error).message);
+  }
 
   sqlite.close();
 }
