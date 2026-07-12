@@ -14,6 +14,12 @@ COPY . .
 # with instructions rather than shipping an image whose /world 404s at runtime.
 RUN test -f world-data/build/styles/themes.json || \
   (echo "ERROR: world-data/build artifacts missing from the build context. Generate them before 'docker build': scripts/world/fetch-geojson.sh && scripts/world/build-tiles.sh && node scripts/world/build-glyphs.js && node scripts/world/build-themes.js" && exit 1)
+# The reference-library embedding model (reference-data/models, ~130MB) is committed to
+# the repo (not git-ignored) and baked into the runtime image below, so it must be present
+# in the build context. Fail fast with instructions rather than shipping an image whose
+# reference search has no local model.
+RUN test -d reference-data/models || \
+  (echo "ERROR: reference-data/models missing — run 'REFERENCE_MODEL_DIR=reference-data/models npx tsx scripts/reference/fetch-model.ts' and commit the weights (see reference-data/DEPLOY.md)" && exit 1)
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
@@ -43,6 +49,11 @@ COPY --from=builder /app/node_modules/@img ./node_modules/@img
 # no volume mount or WORLD_DATA_DIR needed. Set WORLD_DATA_DIR to override with a
 # mounted volume instead.
 COPY --from=builder /app/world-data/build ./world-data/build
+# Bake the reference-library embedding model (~130MB) and SRD corpus into the image
+# so lib/reference/embed.ts resolves the local model from the default REFERENCE_MODEL_DIR
+# (cwd/reference-data/models) with no volume mount or env var needed.
+COPY --from=builder /app/reference-data/models ./reference-data/models
+COPY --from=builder /app/reference-data/srd ./reference-data/srd
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
