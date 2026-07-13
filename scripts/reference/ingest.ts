@@ -44,9 +44,11 @@ async function main() {
   const name = collFlag >= 0 ? rest[collFlag + 1] : path.basename(file ?? "");
   const labelFlag = rest.indexOf("--label");
   const labelOverride = labelFlag >= 0 ? rest[labelFlag + 1] : undefined;
+  const notesFlag = rest.indexOf("--notes");
+  const notes = notesFlag >= 0 ? rest[notesFlag + 1] ?? null : null;
   const replace = rest.includes("--replace");
   const dryRun = rest.includes("--dry-run");
-  if (!file) { console.error("usage: tsx scripts/reference/ingest.ts <file> --collection \"<name>\" [--label \"<citation label>\"] [--replace] [--dry-run]"); process.exit(1); }
+  if (!file) { console.error("usage: tsx scripts/reference/ingest.ts <file> --collection \"<name>\" [--label \"<citation label>\"] [--notes \"<context for the assistant>\"] [--replace] [--dry-run]"); process.exit(1); }
   const sourceType = path.extname(file).toLowerCase() === ".pdf" ? "pdf" : "text";
 
   runMigrations();
@@ -90,7 +92,9 @@ async function main() {
       for (const { id } of oldIds) sqlite.prepare("DELETE FROM vec_reference_chunks WHERE chunk_id = ?").run(id);
       db.delete(referenceCollections).where(eq(referenceCollections.id, existing.id)).run();
     }
-    db.insert(referenceCollections).values({ id: collId, name, sourceType, enabled: true, chunkCount: chunks.length, createdAt: new Date() }).run();
+    // On --replace without a new --notes, preserve the collection's existing note.
+    const notesToStore = notes ?? existing?.notes ?? null;
+    db.insert(referenceCollections).values({ id: collId, name, sourceType, enabled: true, chunkCount: chunks.length, notes: notesToStore, createdAt: new Date() }).run();
     const chunkRows = chunks.map((c) => ({ id: crypto.randomUUID(), collectionId: collId, content: c.content, sourceRef: c.sourceRef, ordinal: c.ordinal, tokenCount: c.tokenCount }));
     for (const row of chunkRows) db.insert(referenceChunks).values(row).run();
     for (let i = 0; i < chunkRows.length; i++) {

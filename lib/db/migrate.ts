@@ -185,6 +185,7 @@ export function runMigrations() {
       source_type TEXT NOT NULL,
       enabled INTEGER NOT NULL DEFAULT 1,
       chunk_count INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
       created_at INTEGER NOT NULL
     );
 
@@ -213,6 +214,7 @@ export function runMigrations() {
   addColumnIfMissing("maps", "height", "INTEGER");
   addColumnIfMissing("maps", "max_zoom", "INTEGER");
   addColumnIfMissing("map_markers", "min_zoom", "INTEGER");
+  addColumnIfMissing("reference_collections", "notes", "TEXT");
   addColumnIfMissing("locations", "type", "TEXT NOT NULL DEFAULT 'other'");
   for (const table of ["characters", "items", "factions", "locations"]) {
     addColumnIfMissing(table, "notion_page_id", "TEXT");

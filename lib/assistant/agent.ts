@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AppDb } from "./read-tools";
 import { buildTools } from "./tools";
+import { getReferenceBriefing } from "@/lib/reference/briefing";
 
 export interface AssistantEvent {
   type: "text" | "proposal" | "citations" | "done" | "error";
@@ -78,12 +79,17 @@ export async function runAssistant(
   const citations: { sourceRef: string; collection: string }[] = [];
   const tools = withCapture(buildTools(opts.db, opts.campaignId), proposals, citations);
 
+  // Append the enabled reference-source roster (with the DM's per-source notes) so the
+  // agent knows what sources exist and their authority before it searches.
+  const briefing = getReferenceBriefing(opts.db);
+  const system = briefing ? `${SYSTEM}\n\n${briefing}` : SYSTEM;
+
   const runner = client.beta.messages.toolRunner({
     model: "claude-opus-4-8",
     max_tokens: 16000,
     max_iterations: 12,
     output_config: { effort: "high" },
-    system: SYSTEM,
+    system,
     tools,
     messages: opts.messages,
     stream: true,

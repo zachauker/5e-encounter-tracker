@@ -6,13 +6,16 @@ import { getDbSqlite } from "@/lib/db/raw";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = (await req.json().catch(() => ({}))) as { enabled?: boolean };
-  if (typeof body.enabled !== "boolean") {
-    return NextResponse.json({ error: "enabled (boolean) required" }, { status: 400 });
+  const body = (await req.json().catch(() => ({}))) as { enabled?: boolean; notes?: string | null };
+  const patch: { enabled?: boolean; notes?: string | null } = {};
+  if (typeof body.enabled === "boolean") patch.enabled = body.enabled;
+  if (typeof body.notes === "string" || body.notes === null) patch.notes = body.notes === null ? null : body.notes.trim() || null;
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: "provide enabled (boolean) and/or notes (string)" }, { status: 400 });
   }
   const [row] = await db
     .update(referenceCollections)
-    .set({ enabled: body.enabled })
+    .set(patch)
     .where(eq(referenceCollections.id, id))
     .returning();
   if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });

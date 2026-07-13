@@ -5,7 +5,7 @@ import type * as schema from "@/lib/db/schema";
 type AppDb = BetterSQLite3Database<typeof schema>;
 export type Embedder = (texts: string[]) => Promise<number[][]>;
 
-export interface RefHit { content: string; sourceRef: string; collection: string; distance: number }
+export interface RefHit { content: string; sourceRef: string; collection: string; note: string | null; distance: number }
 
 export async function upsertVectors(db: AppDb, rows: { chunkId: string; embedding: number[] }[], dims: number): Promise<void> {
   for (const r of rows) {
@@ -32,7 +32,7 @@ export async function searchReference(
   // Over-fetch KNN candidates first, then filter + limit around them.
   const overfetch = Math.max(k * 8, 50);
   const rows = db.all(sql`
-    SELECT rc.content AS content, rc.source_ref AS sourceRef, col.name AS collection, v.distance AS distance
+    SELECT rc.content AS content, rc.source_ref AS sourceRef, col.name AS collection, col.notes AS note, v.distance AS distance
     FROM (
       SELECT chunk_id AS chunk_id, distance AS distance FROM vec_reference_chunks
       WHERE embedding MATCH ${json} AND k = ${overfetch}

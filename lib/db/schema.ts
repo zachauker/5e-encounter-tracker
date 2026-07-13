@@ -200,6 +200,7 @@ export const referenceCollections = sqliteTable("reference_collections", {
   sourceType: text("source_type", { enum: ["srd", "pdf", "text"] }).notNull(),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   chunkCount: integer("chunk_count").notNull().default(0),
+  notes: text("notes"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 

@@ -15,7 +15,7 @@ const stub: Embedder = async (texts) =>
 function seed(db: ReturnType<typeof createTestDb>["db"]) {
   const now = new Date();
   db.insert(referenceCollections).values([
-    { id: "srd", name: "SRD 5.1", sourceType: "srd", enabled: true, chunkCount: 2, createdAt: now },
+    { id: "srd", name: "SRD 5.1", sourceType: "srd", enabled: true, chunkCount: 2, notes: "official core rules", createdAt: now },
     { id: "off", name: "Disabled", sourceType: "text", enabled: false, chunkCount: 1, createdAt: now },
   ]).run();
   db.insert(referenceChunks).values([
@@ -35,7 +35,7 @@ describe("searchReference", () => {
       { chunkId: "c2", embedding: (await stub(["fireball"]))[0] },
     ], DIMS);
     const hits = await searchReference(db, { query: "how do I grapple?", embed: stub, k: 1, dims: DIMS });
-    expect(hits[0]).toMatchObject({ sourceRef: "SRD: Grappling", collection: "SRD 5.1" });
+    expect(hits[0]).toMatchObject({ sourceRef: "SRD: Grappling", collection: "SRD 5.1", note: "official core rules" });
   });
 
   it("excludes disabled collections", async () => {
