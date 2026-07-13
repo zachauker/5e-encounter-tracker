@@ -8,6 +8,9 @@ services:
       - ./data:/data
     environment:
       - DB_PATH=/data/encounter-tracker.db
+      # Reference-library embedding model, mounted from the /data volume (not baked into
+      # the image). Fetch it onto the host at ./data/reference-models — see reference-data/DEPLOY.md.
+      - REFERENCE_MODEL_DIR=/data/reference-models
     labels:
       - "net.unraid.docker.icon=https://img.icons8.com/?size=100&id=vcao1uuXchDQ&format=png&color=000000"
     networks:
