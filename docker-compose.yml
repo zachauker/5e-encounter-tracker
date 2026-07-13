@@ -11,6 +11,9 @@ services:
       # Reference-library embedding model, mounted from the /data volume (not baked into
       # the image). Fetch it onto the host at ./data/reference-models — see reference-data/DEPLOY.md.
       - REFERENCE_MODEL_DIR=/data/reference-models
+      # In-app reference ingestion inbox: drop PDFs/notes into ./data/reference-inbox
+      # on the host and ingest them from Settings → Reference Library. Created on demand.
+      - REFERENCE_INBOX_DIR=/data/reference-inbox
     labels:
       - "net.unraid.docker.icon=https://img.icons8.com/?size=100&id=vcao1uuXchDQ&format=png&color=000000"
     networks:
