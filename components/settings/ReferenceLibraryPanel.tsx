@@ -132,7 +132,7 @@ export function ReferenceLibraryPanel() {
       <div>
         <h2 className="font-display text-xl">Reference Library</h2>
         <p className="text-sm text-muted-foreground">
-          Indexed rulebooks and lore the assistant can cite. Add sources with <code>scripts/reference/ingest.ts</code>. A source&apos;s note tells the assistant what it is and how authoritative it is.
+          Indexed rulebooks and lore the assistant can cite. Add sources from the Inbox below (drop files into <code>reference-inbox/</code> on the server) or Import SRD. A source&apos;s note tells the assistant what it is and how authoritative it is.
         </p>
       </div>
       <div className="space-y-2">
