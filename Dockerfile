@@ -59,6 +59,14 @@ COPY --from=builder /app/node_modules/sqlite-vec-linux-x64 ./node_modules/sqlite
 # Same gap for PDF ingestion: pdfjs-dist loads its standard_fonts/ and cmaps/ data
 # dirs dynamically at runtime, which static tracing misses.
 COPY --from=builder /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
+# pdfjs-dist has a module-level `new DOMMatrix()`; in Node it polyfills DOMMatrix/
+# Path2D by require()-ing its optional peer @napi-rs/canvas. Without it, importing
+# pdf.mjs throws "DOMMatrix is not defined". createRequire loads it dynamically
+# (untraced) and its native binary lives in a sibling platform package, so overlay
+# both. -linux-x64-gnu matches this glibc/x64 base (see the ldd-based selection in
+# @napi-rs/canvas/js-binding.js).
+COPY --from=builder /app/node_modules/@napi-rs/canvas ./node_modules/@napi-rs/canvas
+COPY --from=builder /app/node_modules/@napi-rs/canvas-linux-x64-gnu ./node_modules/@napi-rs/canvas-linux-x64-gnu
 # Bake the world-map artifacts (pmtiles + glyphs + styles, ~17MB) into the image
 # so /api/world serves them from the default WORLD_DIR (cwd/world-data/build) with
 # no volume mount or WORLD_DATA_DIR needed. Set WORLD_DATA_DIR to override with a
