@@ -1,7 +1,7 @@
 import { extractNotionPageId } from "./client";
 import {
   readTitle, readText, readSelect, readMultiSelect,
-  readCheckbox, readNumber, readUrl, readRelationIds, extractDdbId,
+  readCheckbox, readNumber, readUrl, readRelationIds, extractDdbId, readDate,
 } from "./props";
 
 export type PropEntry = { label: string; value: string };
@@ -16,6 +16,7 @@ export interface MappedEntity {
   affiliations?: string[];
   heldByPageIds?: string[];
   notableNpcPageIds?: string[];
+  settingNames?: string[];
 }
 
 export interface NotionRow {
@@ -109,5 +110,28 @@ export function mapLocationRow(row: NotionRow): MappedEntity {
     notionProps: props,
     extra, // never contains `type` → hub type stays world-authoritative
     notableNpcPageIds: readRelationIds(prop(row, "Notable NPCs")),
+  };
+}
+
+export function mapSessionNoteRow(row: NotionRow): MappedEntity {
+  const noteType = readSelect(prop(row, "Type"));
+  const status = readSelect(prop(row, "Status"));
+  const date = readDate(prop(row, "Date"));
+  const arc = readSelect(prop(row, "Arc"));
+
+  const props: PropEntry[] = [];
+  pushIf(props, "Type", noteType);
+  pushIf(props, "Status", status);
+  pushIf(props, "Date", date);
+  pushIf(props, "Arc", arc);
+
+  return {
+    notionPageId: pageId(row),
+    notionUrl: row.url,
+    name: readTitle(prop(row, "Name")),
+    archived: false, // Session Timeline has no Active flag; removal drives archival
+    notionProps: props,
+    extra: { noteType, status, date, arc },
+    settingNames: readMultiSelect(prop(row, "Setting(s)")),
   };
 }

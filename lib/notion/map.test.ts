@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mapFactionRow, mapCharacterRow, mapItemRow } from "./map";
 import { mapLocationRow } from "./map";
+import { mapSessionNoteRow } from "./map";
 
 const page = (id: string, properties: Record<string, unknown>) => ({
   id,
@@ -120,5 +121,47 @@ describe("mapLocationRow", () => {
     expect(m.extra).toEqual({});
     expect(m.notableNpcPageIds).toEqual([]);
     expect(m.notionProps).toEqual([]);
+  });
+});
+
+describe("mapSessionNoteRow", () => {
+  const page = (id: string, properties: Record<string, unknown>) => ({
+    id, url: `https://www.notion.so/${id.replace(/-/g, "")}`, properties,
+  });
+
+  it("maps name, Type/Status/Date/Arc, setting names, and props", () => {
+    const m = mapSessionNoteRow(page("39de996b-e66d-8127-92c0-f3b47e84af28", {
+      Name: { type: "title", title: [{ plain_text: "Cobalt Soul Reunion" }] },
+      Type: { type: "select", select: { name: "Character Event" } },
+      Status: { type: "select", select: { name: "Not started" } },
+      Date: { type: "date", date: { start: "2026-07-19", end: null } },
+      Arc: { type: "select", select: { name: "Dangerous Designs Pt 2" } },
+      "Setting(s)": { type: "multi_select", multi_select: [{ name: "Rexxentrum" }] },
+    }));
+    expect(m.name).toBe("Cobalt Soul Reunion");
+    expect(m.archived).toBe(false);
+    expect(m.settingNames).toEqual(["Rexxentrum"]);
+    expect(m.extra).toEqual({
+      noteType: "Character Event",
+      status: "Not started",
+      date: "2026-07-19",
+      arc: "Dangerous Designs Pt 2",
+    });
+    expect(m.notionProps).toEqual([
+      { label: "Type", value: "Character Event" },
+      { label: "Status", value: "Not started" },
+      { label: "Date", value: "2026-07-19" },
+      { label: "Arc", value: "Dangerous Designs Pt 2" },
+    ]);
+  });
+
+  it("handles a row with no Date and no Settings", () => {
+    const m = mapSessionNoteRow(page("s2", {
+      Name: { type: "title", title: [{ plain_text: "Untimed" }] },
+      Type: { type: "select", select: { name: "Story Outline" } },
+    }));
+    expect(m.extra).toEqual({ noteType: "Story Outline", status: null, date: null, arc: null });
+    expect(m.settingNames).toEqual([]);
+    expect(m.notionProps).toEqual([{ label: "Type", value: "Story Outline" }]);
   });
 });

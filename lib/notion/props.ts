@@ -33,6 +33,12 @@ export function readNumber(p: Prop): number | null {
   return typeof n === "number" ? n : null;
 }
 
+export function readDate(p: Prop): string | null {
+  const d = p?.["date"] as { start?: string } | null | undefined;
+  const start = d?.start;
+  return typeof start === "string" && start.length > 0 ? start : null;
+}
+
 export function readUrl(p: Prop): string | null {
   const u = p?.["url"];
   return typeof u === "string" && u.length > 0 ? u : null;

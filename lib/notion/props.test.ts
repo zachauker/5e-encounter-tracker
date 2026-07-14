@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   readTitle, readSelect, readMultiSelect, readCheckbox,
-  readNumber, readUrl, readText, readRelationIds, extractDdbId,
+  readNumber, readUrl, readText, readRelationIds, extractDdbId, readDate,
 } from "./props";
 
 const props = {
@@ -36,4 +36,14 @@ describe("extractDdbId", () => {
   it("returns null for non-ddb urls", () =>
     expect(extractDdbId("https://example.com/x")).toBeNull());
   it("returns null for null", () => expect(extractDdbId(null)).toBeNull());
+});
+
+describe("readDate", () => {
+  it("reads the start of a date property", () => {
+    expect(readDate({ type: "date", date: { start: "2026-07-19", end: null } })).toBe("2026-07-19");
+  });
+  it("returns null for an empty or missing date", () => {
+    expect(readDate({ type: "date", date: null })).toBeNull();
+    expect(readDate(undefined)).toBeNull();
+  });
 });
