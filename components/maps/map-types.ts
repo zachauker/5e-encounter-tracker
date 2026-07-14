@@ -1,4 +1,4 @@
-export type MarkerType = "location" | "faction" | "character" | "submap" | "note";
+export type MarkerType = "location" | "faction" | "character" | "submap" | "note" | "event";
 
 export interface MarkerData {
   id: string;
@@ -16,7 +16,8 @@ export interface MarkerData {
 export interface ResolvedMarker extends MarkerData {
   resolvedTitle: string;
   resolvedSubtitle: string | null;
-  entitySubtype?: string | null;
+  entitySubtype?: string | null; // location: loc.type; event: note's Notion Type
+  eventDate?: string | null;     // event markers only: the note's Date (ISO), for filtering
 }
 
 export interface MapData {

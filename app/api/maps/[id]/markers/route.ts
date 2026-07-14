@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { mapMarkers, maps, characters, locations, factions } from "@/lib/db/schema";
+import { mapMarkers, maps, characters, locations, factions, sessionNotes } from "@/lib/db/schema";
 import { generateId } from "@/lib/utils";
 import { eq } from "drizzle-orm";
 
 async function resolveMarkerLabel(
   marker: typeof mapMarkers.$inferSelect
-): Promise<{ resolvedTitle: string; resolvedSubtitle: string | null; entitySubtype: string | null }> {
+): Promise<{ resolvedTitle: string; resolvedSubtitle: string | null; entitySubtype: string | null; eventDate: string | null }> {
   if (marker.type === "note") {
-    return { resolvedTitle: marker.title || "Note", resolvedSubtitle: null, entitySubtype: null };
+    return { resolvedTitle: marker.title || "Note", resolvedSubtitle: null, entitySubtype: null, eventDate: null };
   }
   if (marker.type === "submap") {
     const target = marker.targetMapId
@@ -18,10 +18,22 @@ async function resolveMarkerLabel(
       resolvedTitle: marker.title || target?.name || "Sub-map",
       resolvedSubtitle: target ? null : "Map not found",
       entitySubtype: null,
+      eventDate: null,
+    };
+  }
+  if (marker.type === "event") {
+    const note = marker.entityId
+      ? await db.query.sessionNotes.findFirst({ where: eq(sessionNotes.id, marker.entityId) })
+      : null;
+    return {
+      resolvedTitle: marker.title || note?.name || "Event",
+      resolvedSubtitle: note ? null : "Session note not found",
+      entitySubtype: note?.noteType ?? null,
+      eventDate: note?.date ?? null,
     };
   }
   if (!marker.entityId) {
-    return { resolvedTitle: marker.title || "Untitled", resolvedSubtitle: "Entity not found", entitySubtype: null };
+    return { resolvedTitle: marker.title || "Untitled", resolvedSubtitle: "Entity not found", entitySubtype: null, eventDate: null };
   }
   let entityName: string | undefined;
   let entitySubtype: string | null = null;
@@ -38,6 +50,7 @@ async function resolveMarkerLabel(
     resolvedTitle: marker.title || entityName || "Untitled",
     resolvedSubtitle: entityName ? null : "Entity not found",
     entitySubtype,
+    eventDate: null,
   };
 }
 
@@ -55,7 +68,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (typeof body.x !== "number" || typeof body.y !== "number") {
     return NextResponse.json({ error: '"x" and "y" must be numbers' }, { status: 400 });
   }
-  const validTypes = ["location", "faction", "character", "submap", "note"];
+  const validTypes = ["location", "faction", "character", "submap", "note", "event"];
   if (!validTypes.includes(body.type)) {
     return NextResponse.json({ error: `"type" must be one of ${validTypes.join(", ")}` }, { status: 400 });
   }
