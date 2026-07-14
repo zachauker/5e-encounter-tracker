@@ -125,11 +125,37 @@ export const factions = sqliteTable("factions", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
+export const sessionNotes = sqliteTable("session_notes", {
+  id: text("id").primaryKey(),
+  campaignId: text("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  notionUrl: text("notion_url"),
+  notionPageId: text("notion_page_id"),
+  notionProps: text("notion_props"),
+  noteType: text("note_type"),          // Notion "Type" select
+  status: text("status"),                // Notion "Status" select
+  date: text("date"),                    // ISO date string "2026-07-19" — text, not a timestamp
+  arc: text("arc"),                      // Notion "Arc" select
+  archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+  notionSyncedAt: integer("notion_synced_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+export const sessionNoteLocations = sqliteTable(
+  "session_note_locations",
+  {
+    sessionNoteId: text("session_note_id").notNull().references(() => sessionNotes.id, { onDelete: "cascade" }),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.sessionNoteId, t.locationId] })]
+);
+
 export const notionSources = sqliteTable(
   "notion_sources",
   {
     campaignId: text("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
-    entityType: text("entity_type", { enum: ["characters", "items", "factions", "locations"] }).notNull(),
+    entityType: text("entity_type", { enum: ["characters", "items", "factions", "locations", "sessionNotes"] }).notNull(),
     databaseUrl: text("database_url").notNull(),
     dataSourceId: text("data_source_id"),
     lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
@@ -184,7 +210,7 @@ export const mapMarkers = sqliteTable("map_markers", {
   mapId: text("map_id").notNull().references(() => maps.id, { onDelete: "cascade" }),
   x: real("x").notNull(),
   y: real("y").notNull(),
-  type: text("type", { enum: ["location", "faction", "character", "submap", "note"] }).notNull(),
+  type: text("type", { enum: ["location", "faction", "character", "submap", "note", "event"] }).notNull(),
   entityId: text("entity_id"),
   targetMapId: text("target_map_id"),
   title: text("title"),
@@ -231,6 +257,8 @@ export type Item = typeof items.$inferSelect;
 export type NewItem = typeof items.$inferInsert;
 export type Faction = typeof factions.$inferSelect;
 export type NewFaction = typeof factions.$inferInsert;
+export type SessionNote = typeof sessionNotes.$inferSelect;
+export type NewSessionNote = typeof sessionNotes.$inferInsert;
 export type NotionSource = typeof notionSources.$inferSelect;
 export type NewNotionSource = typeof notionSources.$inferInsert;
 export type MapRow = typeof maps.$inferSelect;

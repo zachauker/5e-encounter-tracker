@@ -146,6 +146,32 @@ export function runMigrations() {
       PRIMARY KEY (campaign_id, entity_type)
     );
 
+    CREATE TABLE IF NOT EXISTS session_notes (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      notion_url TEXT,
+      notion_page_id TEXT,
+      notion_props TEXT,
+      note_type TEXT,
+      status TEXT,
+      date TEXT,
+      arc TEXT,
+      archived INTEGER NOT NULL DEFAULT 0,
+      notion_synced_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS session_note_locations (
+      session_note_id TEXT NOT NULL REFERENCES session_notes(id) ON DELETE CASCADE,
+      location_id TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+      PRIMARY KEY (session_note_id, location_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_session_notes_campaign ON session_notes(campaign_id);
+    CREATE INDEX IF NOT EXISTS idx_session_notes_date ON session_notes(date);
+
     CREATE INDEX IF NOT EXISTS idx_characters_campaign ON characters(campaign_id);
     CREATE INDEX IF NOT EXISTS idx_locations_campaign ON locations(campaign_id);
     CREATE INDEX IF NOT EXISTS idx_items_campaign ON items(campaign_id);
