@@ -19,16 +19,22 @@ async function extractFile(file: string): Promise<{ text: string; pageOf?: (i: n
   const ext = path.extname(file).toLowerCase();
   const label = path.basename(file, ext);
   if (ext === ".pdf") {
-    const { createRequire } = await import("module");
-    const requireFn = createRequire(import.meta.url);
-    const pdfjsDir = path.resolve(path.dirname(requireFn.resolve("pdfjs-dist/legacy/build/pdf.mjs")), "..", "..");
+    // Resolve pdfjs's bundled font/cmap asset dirs from cwd/node_modules, NOT via
+    // require.resolve — the Next standalone bundle rewrites require.resolve to a
+    // numeric module id, so path.dirname(require.resolve(...)) throws "path must be
+    // a string, received number" in prod (same class as the sqlite-vec load fix).
+    // The Dockerfile overlays pdfjs-dist into the runtime image at this path.
+    const pdfjsDir = path.join(process.cwd(), "node_modules", "pdfjs-dist");
+    const fontDir = path.join(pdfjsDir, "standard_fonts");
+    const cmapDir = path.join(pdfjsDir, "cmaps");
+    const hasAssets = fs.existsSync(fontDir); // omit the URLs if missing → parse with warnings, don't crash
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     const data = new Uint8Array(fs.readFileSync(file));
     const doc = await pdfjs.getDocument({
       data,
-      standardFontDataUrl: path.join(pdfjsDir, "standard_fonts") + path.sep,
-      cMapUrl: path.join(pdfjsDir, "cmaps") + path.sep,
-      cMapPacked: true,
+      ...(hasAssets
+        ? { standardFontDataUrl: fontDir + path.sep, cMapUrl: cmapDir + path.sep, cMapPacked: true }
+        : {}),
       useSystemFonts: false,
       verbosity: 0,
     }).promise;
