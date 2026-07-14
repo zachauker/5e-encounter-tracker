@@ -46,12 +46,15 @@ export function MarkerFormDialog({ mapId, campaignId, position, marker, currentZ
   useEffect(() => {
     let cancelled = false;
     async function run() {
-      if (type === "character" || type === "location" || type === "faction") {
-        const path = type === "character" ? "characters" : type === "location" ? "locations" : "factions";
+      if (type === "character" || type === "location" || type === "faction" || type === "event") {
+        const path =
+          type === "character" ? "characters" :
+          type === "location" ? "locations" :
+          type === "faction" ? "factions" : "sessions";
         const res = await fetch(`/api/${path}?campaignId=${campaignId}`);
         const data = res.ok ? await res.json() : [];
         if (cancelled) return;
-        // characters/factions/locations all return { items, archivedCount }; kept defensive in case a bare array ever comes back.
+        // characters/factions/locations/sessions all return { items, archivedCount }; kept defensive in case a bare array ever comes back.
         setEntityOptions(Array.isArray(data) ? data : (data.items ?? []));
       } else if (type === "submap") {
         const res = await fetch(`/api/maps?campaignId=${campaignId}&includeNested=true`);
@@ -86,7 +89,7 @@ export function MarkerFormDialog({ mapId, campaignId, position, marker, currentZ
         x: position?.x,
         y: position?.y,
         type,
-        entityId: type === "character" || type === "location" || type === "faction" ? entityId || null : null,
+        entityId: ["character", "location", "faction", "event"].includes(type) ? entityId || null : null,
         targetMapId: type === "submap" ? finalTargetMapId : null,
         title: title.trim() || null,
         note: type === "note" ? note.trim() || null : null,
@@ -114,7 +117,7 @@ export function MarkerFormDialog({ mapId, campaignId, position, marker, currentZ
 
   const canSave =
     (type === "note" && title.trim().length > 0) ||
-    ((type === "character" || type === "location" || type === "faction") && entityId.length > 0) ||
+    (["character", "location", "faction", "event"].includes(type) && entityId.length > 0) ||
     (type === "submap" && (targetMapId.length > 0 || (uploadFile !== null && uploadName.trim().length > 0)));
 
   return (
@@ -163,14 +166,14 @@ export function MarkerFormDialog({ mapId, campaignId, position, marker, currentZ
             })}
           </div>
 
-          {(type === "character" || type === "location" || type === "faction") && (
+          {(type === "character" || type === "location" || type === "faction" || type === "event") && (
             <select
               value={entityId}
               onChange={(e) => setEntityId(e.target.value)}
               aria-label={`Linked ${type}`}
               className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value="">Select a {type}…</option>
+              <option value="">Select {type === "event" ? "a session note" : `a ${type}`}…</option>
               {entityOptions.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name}
