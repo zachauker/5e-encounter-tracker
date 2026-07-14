@@ -11,6 +11,7 @@ const SOURCES = [
   { type: "items", label: "Items & Loot" },
   { type: "factions", label: "Factions & Organizations" },
   { type: "locations", label: "Locations" },
+  { type: "sessionNotes", label: "Session Timeline" },
 ] as const;
 
 interface SourceState {
