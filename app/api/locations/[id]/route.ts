@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { locations, characterLocations, characters, mapMarkers, maps } from "@/lib/db/schema";
+import {
+  locations,
+  characterLocations,
+  characters,
+  mapMarkers,
+  maps,
+  sessionNoteLocations,
+  sessionNotes,
+} from "@/lib/db/schema";
 import { eq, inArray, and } from "drizzle-orm";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -33,10 +41,23 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     })
   );
 
+  const noteLinks = await db.query.sessionNoteLocations.findMany({
+    where: eq(sessionNoteLocations.locationId, id),
+  });
+  const linkedSessionNotes =
+    noteLinks.length > 0
+      ? await db.query.sessionNotes.findMany({
+          where: inArray(sessionNotes.id, noteLinks.map((l) => l.sessionNoteId)),
+        })
+      : [];
+
   return NextResponse.json({
     ...row,
     linkedCharacters: linkedCharacters.map((c) => ({ id: c.id, name: c.name, type: c.type })),
     mapMarkers: resolvedMapMarkers,
+    linkedSessionNotes: linkedSessionNotes
+      .filter((n) => !n.archived)
+      .map((n) => ({ id: n.id, name: n.name, noteType: n.noteType, date: n.date })),
     notionProps: row.notionProps
       ? (JSON.parse(row.notionProps) as Array<{ label: string; value: string }>)
       : [],

@@ -23,6 +23,7 @@ interface SimpleEntityDetailData {
   linkedCharacters: { id: string; name: string; type: string }[];
   mapMarkers?: { mapId: string; mapName: string; markerId: string; renderMode: "static" | "tiled" | "world" }[];
   notionProps?: { label: string; value: string }[];
+  linkedSessionNotes?: { id: string; name: string; noteType: string | null; date: string | null }[];
 }
 
 interface SimpleEntityDetailProps {
@@ -229,6 +230,27 @@ export function SimpleEntityDetail({ resourcePath, label, icon: Icon }: SimpleEn
                   />
                 ))}
               </div>
+            </div>
+          )}
+
+          {entity.linkedSessionNotes && entity.linkedSessionNotes.length > 0 && (
+            <div className="mt-4">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Events here</h2>
+              <ul className="space-y-1.5">
+                {entity.linkedSessionNotes.map((n) => (
+                  <li key={n.id}>
+                    <Link
+                      href={`/sessions/${n.id}`}
+                      className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2 hover:border-muted-foreground/40 transition-colors"
+                    >
+                      <span className="font-medium truncate">{n.name}</span>
+                      <span className="flex-none text-xs text-muted-foreground">
+                        {[n.noteType, n.date].filter(Boolean).join(" · ")}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
