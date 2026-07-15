@@ -11,6 +11,7 @@ import { ArrowLeft, Loader2, Plus, X, ChevronRight, Move, Pencil, Trash2 } from 
 import { StaticMapCanvas } from "@/components/maps/StaticMapCanvas";
 import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { MarkerInfoPanel } from "@/components/maps/MarkerInfoPanel";
+import { EventNotePanel } from "@/components/maps/EventNotePanel";
 import { useCampaignStore } from "@/lib/store/campaign-store";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
@@ -327,7 +328,23 @@ export function MapViewer() {
           </div>
         )}
 
-        {selectedMarker && (
+        {selectedMarker && selectedMarker.type === "event" && (
+          <EventNotePanel
+            key={selectedMarker.id}
+            marker={selectedMarker}
+            onClose={() => setSelectedId(null)}
+            onEdit={() => {
+              setEditingMarker(selectedMarker);
+              setSelectedId(null);
+            }}
+            onDelete={async () => {
+              await fetch(`/api/maps/markers/${selectedMarker.id}`, { method: "DELETE" });
+              setSelectedId(null);
+              loadMarkers();
+            }}
+          />
+        )}
+        {selectedMarker && selectedMarker.type !== "event" && (
           <MarkerInfoPanel
             key={selectedMarker.id}
             marker={selectedMarker}
