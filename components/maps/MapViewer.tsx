@@ -12,6 +12,7 @@ import { StaticMapCanvas } from "@/components/maps/StaticMapCanvas";
 import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { MarkerInfoPanel } from "@/components/maps/MarkerInfoPanel";
 import { EventNotePanel } from "@/components/maps/EventNotePanel";
+import { UnpinnedNotesTray } from "@/components/maps/UnpinnedNotesTray";
 import { useCampaignStore } from "@/lib/store/campaign-store";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
@@ -53,6 +54,8 @@ export function MapViewer() {
   const [viewZoom, setViewZoom] = useState<number | undefined>(undefined);
   const [moveMode, setMoveMode] = useState(false);
   const [lastMove, setLastMove] = useState<{ markerId: string; prevX: number; prevY: number; title: string } | null>(null);
+  const [pendingNoteId, setPendingNoteId] = useState<string | null>(null);
+  const [trayReloadKey, setTrayReloadKey] = useState(0);
   // Snapshot of a marker's position at the start of a drag (dragMove updates
   // local state live, so the pre-drag position must be captured on first move).
   const dragOriginRef = useRef<{ id: string; x: number; y: number } | null>(null);
@@ -113,8 +116,37 @@ export function MapViewer() {
   }, [id, loadMarkers]);
 
   function handleCanvasClick(pos: { x: number; y: number }) {
+    if (pendingNoteId) {
+      const noteId = pendingNoteId;
+      setPendingNoteId(null);
+      setAddMode(false);
+      fetch(`/api/maps/${id}/markers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ x: pos.x, y: pos.y, type: "event", entityId: noteId }),
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            toast({ title: "Couldn’t place note", description: data.error ?? "Please try again.", variant: "error" });
+            return;
+          }
+          loadMarkers();
+          setTrayReloadKey((k) => k + 1);
+        })
+        .catch(() => {
+          toast({ title: "Couldn’t place note", description: "Please try again.", variant: "error" });
+        });
+      return;
+    }
     setPendingPosition(pos);
     setAddMode(false);
+  }
+
+  function pickUnpinnedNote(noteId: string) {
+    setPendingNoteId(noteId);
+    setAddMode(true);
+    setMoveMode(false);
   }
 
   function handleMarkerClick(marker: ResolvedMarker) {
@@ -285,6 +317,7 @@ export function MapViewer() {
             onClick={() => {
               setMoveMode((v) => !v);
               setAddMode(false);
+              setPendingNoteId(null);
             }}
             className="gap-1.5"
             title="Toggle dragging markers to reposition them"
@@ -298,6 +331,7 @@ export function MapViewer() {
             onClick={() => {
               setAddMode((v) => !v);
               setMoveMode(false);
+              setPendingNoteId(null);
             }}
             className="gap-1.5"
           >
@@ -328,6 +362,15 @@ export function MapViewer() {
           </div>
         )}
 
+        {activeCampaignId && (
+          <UnpinnedNotesTray
+            campaignId={activeCampaignId}
+            date={selectedDate}
+            reloadKey={trayReloadKey}
+            onPick={pickUnpinnedNote}
+          />
+        )}
+
         {selectedMarker && selectedMarker.type === "event" && (
           <EventNotePanel
             key={selectedMarker.id}
@@ -341,6 +384,7 @@ export function MapViewer() {
               await fetch(`/api/maps/markers/${selectedMarker.id}`, { method: "DELETE" });
               setSelectedId(null);
               loadMarkers();
+              setTrayReloadKey((k) => k + 1);
             }}
           />
         )}
@@ -357,6 +401,7 @@ export function MapViewer() {
               await fetch(`/api/maps/markers/${selectedMarker.id}`, { method: "DELETE" });
               setSelectedId(null);
               loadMarkers();
+              setTrayReloadKey((k) => k + 1);
             }}
           />
         )}
@@ -377,6 +422,7 @@ export function MapViewer() {
             setPendingPosition(null);
             setEditingMarker(null);
             loadMarkers();
+            setTrayReloadKey((k) => k + 1);
           }}
         />
       )}
