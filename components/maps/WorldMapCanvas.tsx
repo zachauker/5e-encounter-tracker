@@ -32,6 +32,7 @@ export interface WorldMapCanvasProps {
   onZoomChange?: (zoom: number) => void;
   markers: ResolvedMarker[];
   selectedId: string | null;
+  showLabels: boolean;
   onMarkerClick: (marker: ResolvedMarker) => void;
   onMarkerDragEnd: (markerId: string, lngLat: { lng: number; lat: number }) => void;
 }

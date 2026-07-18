@@ -38,6 +38,7 @@ export interface MapCanvasProps {
   addMode: boolean;
   markersDraggable: boolean;
   selectedId: string | null;
+  showLabels?: boolean;
   onImageClick: (pos: { x: number; y: number }) => void;
   onMarkerClick: (marker: ResolvedMarker) => void;
   onMarkerDragMove: (markerId: string, pos: { x: number; y: number }) => void;
