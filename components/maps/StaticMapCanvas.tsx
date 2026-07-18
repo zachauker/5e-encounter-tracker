@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { MapMarkerPin } from "@/components/maps/MapMarkerPin";
+import { MarkerLabel } from "@/components/maps/MarkerLabel";
 import type { MapCanvasProps } from "@/components/maps/map-types";
 
 export function StaticMapCanvas({
@@ -11,6 +12,7 @@ export function StaticMapCanvas({
   addMode,
   markersDraggable,
   selectedId,
+  showLabels = false,
   onImageClick,
   onMarkerClick,
   onMarkerDragMove,
@@ -103,6 +105,7 @@ export function StaticMapCanvas({
                 }}
               >
                 <MapMarkerPin type={m.type} subtype={m.entitySubtype} selected={m.id === selectedId} />
+                {showLabels && <MarkerLabel text={m.resolvedTitle} />}
               </div>
             ))}
           </div>
