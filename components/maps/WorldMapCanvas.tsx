@@ -7,6 +7,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { Loader2 } from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MapMarkerPin } from "@/components/maps/MapMarkerPin";
+import { MarkerLabel } from "@/components/maps/MarkerLabel";
 import type { ResolvedMarker } from "@/components/maps/map-types";
 
 // Register the pmtiles:// protocol once for the whole app. The Protocol instance
@@ -32,6 +33,7 @@ export interface WorldMapCanvasProps {
   onZoomChange?: (zoom: number) => void;
   markers: ResolvedMarker[];
   selectedId: string | null;
+  showLabels: boolean;
   onMarkerClick: (marker: ResolvedMarker) => void;
   onMarkerDragEnd: (markerId: string, lngLat: { lng: number; lat: number }) => void;
 }
@@ -59,6 +61,7 @@ export function WorldMapCanvas({
   onZoomChange,
   markers,
   selectedId,
+  showLabels,
   onMarkerClick,
   onMarkerDragEnd,
 }: WorldMapCanvasProps) {
@@ -188,9 +191,13 @@ export function WorldMapCanvas({
       if (!inst) {
         const el = document.createElement("div");
         el.innerHTML = renderToStaticMarkup(
-          <MapMarkerPin type={marker.type} subtype={marker.entitySubtype} selected={sel} />
+          <>
+            <MapMarkerPin type={marker.type} subtype={marker.entitySubtype} selected={sel} />
+            {showLabels && <MarkerLabel text={marker.resolvedTitle} />}
+          </>
         );
         el.dataset.sel = sel ? "1" : "0";
+        el.dataset.lbl = showLabels ? "1" : "0";
         // Staggered rise-in for newly-revealed pins (skip the selected one — it
         // gets the bloom instead, and two transform animations would fight).
         const pin = el.firstElementChild as HTMLElement | null;
@@ -213,19 +220,23 @@ export function WorldMapCanvas({
         instances.set(marker.id, inst);
       } else {
         inst.setLngLat(lngLat);
-        // Only regenerate the pin markup when its selected state actually flips.
-        // This stops per-zoom churn (a perf win) and lets the freshly-mounted
-        // selected pin play its one-shot arrival bloom exactly once.
+        // Regenerate the pin+label markup when either the selected state or the
+        // label visibility changes. This stops per-zoom churn (a perf win) and
+        // lets the freshly-mounted selected pin play its one-shot arrival bloom.
         const el = inst.getElement();
-        if (el.dataset.sel !== (sel ? "1" : "0")) {
+        if (el.dataset.sel !== (sel ? "1" : "0") || el.dataset.lbl !== (showLabels ? "1" : "0")) {
           el.innerHTML = renderToStaticMarkup(
-            <MapMarkerPin type={marker.type} subtype={marker.entitySubtype} selected={sel} />
+            <>
+              <MapMarkerPin type={marker.type} subtype={marker.entitySubtype} selected={sel} />
+              {showLabels && <MarkerLabel text={marker.resolvedTitle} />}
+            </>
           );
           el.dataset.sel = sel ? "1" : "0";
+          el.dataset.lbl = showLabels ? "1" : "0";
         }
       }
     }
-  }, [markers, selectedId, ready, zoom]);
+  }, [markers, selectedId, ready, zoom, showLabels]);
 
   // Toggle draggability on existing marker instances when Move mode changes.
   useEffect(() => {

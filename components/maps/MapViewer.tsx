@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Loader2, Plus, X, ChevronRight, Move, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, X, ChevronRight, Move, Pencil, Trash2, Tag } from "lucide-react";
 import { StaticMapCanvas } from "@/components/maps/StaticMapCanvas";
 import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
 import { MarkerInfoPanel } from "@/components/maps/MarkerInfoPanel";
@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/toast";
 import type { MapData, ResolvedMarker } from "@/components/maps/map-types";
 import { MarkerLayerControl } from "@/components/maps/MarkerLayerControl";
 import { isMarkerVisible, readHiddenLayers } from "@/components/maps/marker-layers";
+import { readShowLabels, writeShowLabels } from "@/components/maps/marker-labels";
 import { EventDateFilter } from "@/components/maps/EventDateFilter";
 import { eventDatesOf, defaultEventDate, filterByEventDate, todayISO } from "@/components/maps/event-date-filter";
 
@@ -72,6 +73,19 @@ export function MapViewer() {
   function updateHidden(next: Set<string>) {
     setHidden(next);
     window.localStorage.setItem(`markerLayers:${id}`, JSON.stringify([...next]));
+  }
+
+  const [showLabels, setShowLabels] = useState<boolean>(() => readShowLabels(id));
+  const [labelsLoadedFor, setLabelsLoadedFor] = useState(id);
+  if (id !== labelsLoadedFor) {
+    setLabelsLoadedFor(id);
+    setShowLabels(readShowLabels(id));
+  }
+
+  function toggleLabels() {
+    const next = !showLabels;
+    setShowLabels(next);
+    writeShowLabels(id, next);
   }
 
   // Seed the selected session date ONCE, the first time event dates appear,
@@ -266,6 +280,7 @@ export function MapViewer() {
     addMode,
     markersDraggable: moveMode,
     selectedId,
+    showLabels,
     onImageClick: handleCanvasClick,
     onMarkerClick: handleMarkerClick,
     onMarkerDragMove: handleMarkerDragMove,
@@ -311,6 +326,16 @@ export function MapViewer() {
         <div className="flex items-center gap-1.5 flex-none">
           <EventDateFilter dates={eventDates} selected={selectedDate} onChange={setSelectedDate} />
           <MarkerLayerControl markers={markers} hidden={hidden} onChange={updateHidden} />
+          <Button
+            size="sm"
+            variant={showLabels ? "initiative" : "outline"}
+            onClick={toggleLabels}
+            className="gap-1.5"
+            title="Show or hide marker name labels on the map"
+          >
+            <Tag className="w-3.5 h-3.5" />
+            {showLabels ? "Hide Labels" : "Show Labels"}
+          </Button>
           <Button
             size="sm"
             variant={moveMode ? "initiative" : "outline"}
