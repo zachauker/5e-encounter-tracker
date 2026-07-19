@@ -116,6 +116,7 @@ function MarkerWithReveal({
 
   const icon = useMemo(
     () => markerIcon(marker, selected, showLabels),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [marker.type, marker.entitySubtype, marker.resolvedTitle, selected, showLabels]
   );
 
