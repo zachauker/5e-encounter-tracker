@@ -88,22 +88,41 @@ export const FIRST_TICK_DELAY_MS = 30_000;
 let started = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
 
-async function tickAndReschedule(): Promise<void> {
+export interface TickCycleDeps {
+  readConfig?: () => Promise<AutoSyncConfig>;
+  runTick?: () => Promise<unknown>;
+}
+
+/**
+ * Runs one tick — reads config, and if enabled runs the sync pass — then returns
+ * the delay in ms until the next tick should fire. Never throws: any failure is
+ * logged and the loop reschedules at the default interval, so a bad tick can't
+ * stop the loop. Dependencies are injectable for testing; production uses the
+ * real config reader and sync pass.
+ */
+export async function runTickAndComputeDelay(deps: TickCycleDeps = {}): Promise<number> {
+  const readConfig = deps.readConfig ?? (() => readAutoSyncConfig());
+  const runTick = deps.runTick ?? (() => runAutoSyncTick());
+
   let intervalMinutes = DEFAULT_INTERVAL_MINUTES;
   try {
-    const config = await readAutoSyncConfig();
+    const config = await readConfig();
     intervalMinutes = config.intervalMinutes;
     if (config.enabled) {
-      await runAutoSyncTick();
+      await runTick();
     }
   } catch (err) {
     // Never let a thrown error stop the reschedule loop.
     console.error("[notion-auto-sync] tick error", err);
-  } finally {
-    timer = setTimeout(() => void tickAndReschedule(), intervalMinutes * MINUTE_MS);
-    // Don't keep the event loop alive purely for the sync timer.
-    if (typeof timer.unref === "function") timer.unref();
   }
+  return intervalMinutes * MINUTE_MS;
+}
+
+async function tickAndReschedule(): Promise<void> {
+  const delayMs = await runTickAndComputeDelay();
+  timer = setTimeout(() => void tickAndReschedule(), delayMs);
+  // Don't keep the event loop alive purely for the sync timer.
+  if (typeof timer.unref === "function") timer.unref();
 }
 
 /**

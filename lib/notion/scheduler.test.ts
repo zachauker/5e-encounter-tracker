@@ -1,9 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { createTestDb } from "./test-helpers";
-import { readAutoSyncConfig, runAutoSyncTick } from "./scheduler";
+import {
+  readAutoSyncConfig,
+  runAutoSyncTick,
+  runTickAndComputeDelay,
+  startNotionAutoSync,
+} from "./scheduler";
 import { settings } from "@/lib/db/schema";
 import { tryAcquireSync, releaseSync } from "./sync-lock";
+
+const MIN = 60_000;
 
 describe("readAutoSyncConfig", () => {
   it("defaults to enabled=true, interval=15 when unset", async () => {
@@ -75,5 +82,71 @@ describe("runAutoSyncTick", () => {
     // Lock for the failed campaign must have been released.
     expect(tryAcquireSync("boom")).toBe(true);
     releaseSync("boom");
+  });
+});
+
+describe("runTickAndComputeDelay", () => {
+  it("runs the tick when enabled and returns the configured interval as ms", async () => {
+    const runTick = vi.fn(async () => {});
+    const delay = await runTickAndComputeDelay({
+      readConfig: async () => ({ enabled: true, intervalMinutes: 30 }),
+      runTick,
+    });
+    expect(runTick).toHaveBeenCalledTimes(1);
+    expect(delay).toBe(30 * MIN);
+  });
+
+  it("skips the tick when disabled but still returns the configured interval", async () => {
+    const runTick = vi.fn(async () => {});
+    const delay = await runTickAndComputeDelay({
+      readConfig: async () => ({ enabled: false, intervalMinutes: 60 }),
+      runTick,
+    });
+    expect(runTick).not.toHaveBeenCalled();
+    expect(delay).toBe(60 * MIN);
+  });
+
+  it("reschedules at the default interval when reading config throws", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const runTick = vi.fn(async () => {});
+      const delay = await runTickAndComputeDelay({
+        readConfig: async () => { throw new Error("db down"); },
+        runTick,
+      });
+      expect(runTick).not.toHaveBeenCalled();
+      expect(delay).toBe(15 * MIN); // DEFAULT_INTERVAL_MINUTES
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("does not throw and still returns a delay when the tick itself throws", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const delay = await runTickAndComputeDelay({
+        readConfig: async () => ({ enabled: true, intervalMinutes: 5 }),
+        runTick: async () => { throw new Error("kaboom"); },
+      });
+      expect(delay).toBe(5 * MIN);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
+describe("startNotionAutoSync", () => {
+  it("is idempotent — repeated calls schedule only one timer", () => {
+    vi.useFakeTimers();
+    try {
+      const before = vi.getTimerCount();
+      startNotionAutoSync();
+      startNotionAutoSync();
+      startNotionAutoSync();
+      expect(vi.getTimerCount()).toBe(before + 1);
+    } finally {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
   });
 });
