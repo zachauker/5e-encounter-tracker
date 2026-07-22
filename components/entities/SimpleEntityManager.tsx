@@ -154,7 +154,7 @@ export function SimpleEntityManager({ resourcePath, label, icon: Icon }: SimpleE
               <Link
                 href={`/${resourcePath}/${e.id}`}
                 aria-label={`Open ${singular}: ${e.name}`}
-                className="relative z-10 flex-none rounded-md p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex-none rounded-md p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
@@ -162,7 +162,7 @@ export function SimpleEntityManager({ resourcePath, label, icon: Icon }: SimpleE
                 size="icon-sm"
                 variant="ghost"
                 aria-label={`Delete ${singular}: ${e.name}`}
-                className="relative z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-destructive hover:text-destructive"
+                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-destructive hover:text-destructive"
                 onClick={(ev) => remove(e.id, ev)}
               >
                 <Trash2 className="w-3.5 h-3.5" />

@@ -102,6 +102,9 @@ export default function CharactersPage() {
               <EntityQuickViewPopover
                 resourcePath="characters"
                 id={c.id}
+                // The /api/characters/{id} response is a structural superset of
+                // CharacterWithLinks (carries factionIds/locationIds/itemIds/mapMarkers),
+                // the same shape the detail page feeds this dialog.
                 onEdit={(entity) => setEditCharacter(entity as unknown as CharacterWithLinks)}
               >
                 <button
@@ -112,13 +115,13 @@ export default function CharactersPage() {
                   <p className="font-medium text-[15px] leading-tight truncate">{c.name}</p>
                 </button>
               </EntityQuickViewPopover>
-              <Badge variant={c.type === "pc" ? "hp" : "outline"} className="capitalize relative z-10">
+              <Badge variant={c.type === "pc" ? "hp" : "outline"} className="capitalize">
                 {c.type}
               </Badge>
               <Link
                 href={`/characters/${c.id}`}
                 aria-label={`Open character: ${c.name}`}
-                className="relative z-10 flex-none rounded-md p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex-none rounded-md p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
@@ -126,7 +129,7 @@ export default function CharactersPage() {
                 size="icon-sm"
                 variant="ghost"
                 aria-label={`Delete character: ${c.name}`}
-                className="relative z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-destructive hover:text-destructive"
+                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-destructive hover:text-destructive"
                 onClick={(e) => remove(c.id, e)}
               >
                 <Trash2 className="w-3.5 h-3.5" />

@@ -125,6 +125,7 @@ export function EntityQuickView({ resourcePath, id, onEdit }: EntityQuickViewPro
         </Link>
         {onEdit && (
           <button
+            type="button"
             onClick={() => onEdit(raw)}
             className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
