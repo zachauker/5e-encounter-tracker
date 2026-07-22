@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { characters, characterFactions, characterLocations, characterItems, mapMarkers, maps } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { characters, characterFactions, characterLocations, characterItems, factions, locations, items, mapMarkers, maps } from "@/lib/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -13,6 +13,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     db.query.characterLocations.findMany({ where: eq(characterLocations.characterId, id) }),
     db.query.characterItems.findMany({ where: eq(characterItems.characterId, id) }),
     db.query.mapMarkers.findMany({ where: and(eq(mapMarkers.entityId, id), eq(mapMarkers.type, "character")) }),
+  ]);
+
+  const [relatedFactions, relatedLocations, relatedItems] = await Promise.all([
+    factionLinks.length
+      ? db.query.factions.findMany({ where: inArray(factions.id, factionLinks.map((l) => l.factionId)) })
+      : Promise.resolve([]),
+    locationLinks.length
+      ? db.query.locations.findMany({ where: inArray(locations.id, locationLinks.map((l) => l.locationId)) })
+      : Promise.resolve([]),
+    itemLinks.length
+      ? db.query.items.findMany({ where: inArray(items.id, itemLinks.map((l) => l.itemId)) })
+      : Promise.resolve([]),
   ]);
 
   const resolvedMapMarkers = await Promise.all(
@@ -32,6 +44,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     factionIds: factionLinks.map((l) => l.factionId),
     locationIds: locationLinks.map((l) => l.locationId),
     itemIds: itemLinks.map((l) => l.itemId),
+    relatedFactions: relatedFactions.map((f) => ({ id: f.id, name: f.name })),
+    relatedLocations: relatedLocations.map((l) => ({ id: l.id, name: l.name })),
+    relatedItems: relatedItems.map((i) => ({ id: i.id, name: i.name })),
     mapMarkers: resolvedMapMarkers,
     notionProps: row.notionProps
       ? (JSON.parse(row.notionProps) as Array<{ label: string; value: string }>)
