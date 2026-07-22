@@ -8,6 +8,8 @@ import { Loader2 } from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MapMarkerPin } from "@/components/maps/MapMarkerPin";
 import { MarkerLabel } from "@/components/maps/MarkerLabel";
+import { resolveMarkerAppearance } from "@/components/maps/marker-appearance";
+import type { TypeAppearanceMap } from "@/components/maps/marker-appearance";
 import type { ResolvedMarker } from "@/components/maps/map-types";
 
 // Register the pmtiles:// protocol once for the whole app. The Protocol instance
@@ -36,6 +38,7 @@ export interface WorldMapCanvasProps {
   showLabels: boolean;
   onMarkerClick: (marker: ResolvedMarker) => void;
   onMarkerDragEnd: (markerId: string, lngLat: { lng: number; lat: number }) => void;
+  typeDefaults?: TypeAppearanceMap;
 }
 
 // Point a fetched theme style at the app's world-asset routes.
@@ -64,6 +67,7 @@ export function WorldMapCanvas({
   showLabels,
   onMarkerClick,
   onMarkerDragEnd,
+  typeDefaults = {},
 }: WorldMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const glMapRef = useRef<MapLibreMap | null>(null);
@@ -187,17 +191,22 @@ export function WorldMapCanvas({
     for (const marker of visible) {
       const lngLat: [number, number] = [marker.x, marker.y]; // x=lng, y=lat for world maps
       const sel = marker.id === selectedId;
+      const appearance = resolveMarkerAppearance(marker, typeDefaults);
+      const appSig = `${appearance.width}x${appearance.height}:${appearance.shape}:${appearance.color}:${appearance.labelSize}:${appearance.labelHidden}`;
       let inst = instances.get(marker.id);
       if (!inst) {
         const el = document.createElement("div");
         el.innerHTML = renderToStaticMarkup(
           <>
-            <MapMarkerPin type={marker.type} subtype={marker.entitySubtype} selected={sel} />
-            {showLabels && <MarkerLabel text={marker.resolvedTitle} />}
+            <MapMarkerPin appearance={appearance} selected={sel} />
+            {showLabels && !appearance.labelHidden && (
+              <MarkerLabel text={marker.resolvedTitle} labelSize={appearance.labelSize} />
+            )}
           </>
         );
         el.dataset.sel = sel ? "1" : "0";
         el.dataset.lbl = showLabels ? "1" : "0";
+        el.dataset.app = appSig;
         // Staggered rise-in for newly-revealed pins (skip the selected one — it
         // gets the bloom instead, and two transform animations would fight).
         const pin = el.firstElementChild as HTMLElement | null;
@@ -210,7 +219,12 @@ export function WorldMapCanvas({
           evt.stopPropagation();
           markerCbRef.current.onMarkerClick(marker);
         });
-        inst = new Marker({ element: el, draggable: markersDraggableRef.current, anchor: "bottom" })
+        // maplibre's marker `anchor` is fixed at creation time, so a later
+        // appearance change that flips the anchor (bottom <-> center, e.g. a
+        // shape swap) only takes full effect once the marker is re-created
+        // (id change / remove+re-add). Size/color/icon/label updates apply
+        // live via the innerHTML re-render below.
+        inst = new Marker({ element: el, draggable: markersDraggableRef.current, anchor: appearance.anchor })
           .setLngLat(lngLat)
           .addTo(glMap);
         inst.on("dragend", () => {
@@ -220,23 +234,31 @@ export function WorldMapCanvas({
         instances.set(marker.id, inst);
       } else {
         inst.setLngLat(lngLat);
-        // Regenerate the pin+label markup when either the selected state or the
-        // label visibility changes. This stops per-zoom churn (a perf win) and
-        // lets the freshly-mounted selected pin play its one-shot arrival bloom.
+        // Regenerate the pin+label markup when the selected state, label
+        // visibility, or resolved appearance changes. This stops per-zoom
+        // churn (a perf win) and lets the freshly-mounted selected pin play
+        // its one-shot arrival bloom.
         const el = inst.getElement();
-        if (el.dataset.sel !== (sel ? "1" : "0") || el.dataset.lbl !== (showLabels ? "1" : "0")) {
+        if (
+          el.dataset.sel !== (sel ? "1" : "0") ||
+          el.dataset.lbl !== (showLabels ? "1" : "0") ||
+          el.dataset.app !== appSig
+        ) {
           el.innerHTML = renderToStaticMarkup(
             <>
-              <MapMarkerPin type={marker.type} subtype={marker.entitySubtype} selected={sel} />
-              {showLabels && <MarkerLabel text={marker.resolvedTitle} />}
+              <MapMarkerPin appearance={appearance} selected={sel} />
+              {showLabels && !appearance.labelHidden && (
+                <MarkerLabel text={marker.resolvedTitle} labelSize={appearance.labelSize} />
+              )}
             </>
           );
           el.dataset.sel = sel ? "1" : "0";
           el.dataset.lbl = showLabels ? "1" : "0";
+          el.dataset.app = appSig;
         }
       }
     }
-  }, [markers, selectedId, ready, zoom, showLabels]);
+  }, [markers, selectedId, ready, zoom, showLabels, typeDefaults]);
 
   // Toggle draggability on existing marker instances when Move mode changes.
   useEffect(() => {
