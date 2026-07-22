@@ -56,4 +56,14 @@ describe("buildEntityQuickView", () => {
     const m = buildEntityQuickView("locations", { id: "l9", name: "?", type: "plane" });
     expect(m.typeLabel).toBe("plane");
   });
+
+  it("treats an unknown character type as no label / undefined related type", () => {
+    const m = buildEntityQuickView("characters", { id: "c9", name: "??", type: "monster" });
+    expect(m.typeLabel).toBeNull();
+    const linked = buildEntityQuickView("locations", {
+      id: "l1", name: "X",
+      linkedCharacters: [{ id: "c9", name: "??", type: "monster" }],
+    });
+    expect(linked.related[0].items[0].type).toBeUndefined();
+  });
 });

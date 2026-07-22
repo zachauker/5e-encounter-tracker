@@ -1,6 +1,6 @@
 export type EntityResourcePath = "characters" | "locations" | "items" | "factions";
 
-/** How many Notion props the compact popover shows before truncating. */
+/** Max number of Notion props exposed in the quick-view model before truncation. */
 export const PROP_LIMIT = 4;
 
 export interface RelatedItem {
@@ -49,18 +49,23 @@ const LOCATION_TYPE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+function characterTypeLabel(type?: string | null): "PC" | "NPC" | null {
+  if (type === "pc") return "PC";
+  if (type === "npc") return "NPC";
+  return null;
+}
+
 function resolveTypeLabel(resourcePath: EntityResourcePath, type?: string | null): string | null {
   if (!type) return null;
   if (resourcePath === "locations") return LOCATION_TYPE_LABELS[type] ?? type;
   if (resourcePath === "characters") {
-    if (type === "pc") return "PC";
-    if (type === "npc") return "NPC";
-    return null;
+    return characterTypeLabel(type);
   }
+  // items and factions have no type subtype
   return null;
 }
 
-function group(label: string, rows: { id: string; name: string }[], hrefBase: string): RelatedGroup[] {
+function toRelatedGroup(label: string, rows: { id: string; name: string }[], hrefBase: string): RelatedGroup[] {
   if (!rows || rows.length === 0) return [];
   return [{ label, items: rows.map((r) => ({ id: r.id, name: r.name, href: `${hrefBase}/${r.id}` })) }];
 }
@@ -68,9 +73,9 @@ function group(label: string, rows: { id: string; name: string }[], hrefBase: st
 function buildRelated(resourcePath: EntityResourcePath, raw: EntityDetailResponse): RelatedGroup[] {
   if (resourcePath === "characters") {
     return [
-      ...group("Factions", raw.relatedFactions ?? [], "/factions"),
-      ...group("Locations", raw.relatedLocations ?? [], "/locations"),
-      ...group("Items", raw.relatedItems ?? [], "/items"),
+      ...toRelatedGroup("Factions", raw.relatedFactions ?? [], "/factions"),
+      ...toRelatedGroup("Locations", raw.relatedLocations ?? [], "/locations"),
+      ...toRelatedGroup("Items", raw.relatedItems ?? [], "/items"),
     ];
   }
   const chars = raw.linkedCharacters ?? [];
@@ -82,7 +87,7 @@ function buildRelated(resourcePath: EntityResourcePath, raw: EntityDetailRespons
         id: c.id,
         name: c.name,
         href: `/characters/${c.id}`,
-        type: c.type === "pc" ? "PC" : "NPC",
+        type: characterTypeLabel(c.type) ?? undefined,
       })),
     },
   ];
