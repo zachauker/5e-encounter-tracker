@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { Loader2, Plus, X, Download, Move, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarkerFormDialog } from "@/components/maps/MarkerFormDialog";
-import { MarkerInfoPanel } from "@/components/maps/MarkerInfoPanel";
+import { MarkerSlideOver } from "@/components/maps/MarkerSlideOver";
 import { useCampaignStore } from "@/lib/store/campaign-store";
 import type { ResolvedMarker } from "@/components/maps/map-types";
 import { MarkerLayerControl } from "@/components/maps/MarkerLayerControl";
@@ -301,15 +301,15 @@ export function WorldMapViewer() {
         )}
 
         {selectedMarker && (
-          <MarkerInfoPanel
+          <MarkerSlideOver
             key={selectedMarker.id}
             marker={selectedMarker}
             onClose={() => setSelectedId(null)}
-            onEdit={() => {
+            onEditPin={() => {
               setEditing(selectedMarker);
               setSelectedId(null);
             }}
-            onDelete={async () => {
+            onDeletePin={async () => {
               await fetch(`/api/maps/markers/${selectedMarker.id}`, { method: "DELETE" });
               setSelectedId(null);
               loadMarkers(worldMapId);
