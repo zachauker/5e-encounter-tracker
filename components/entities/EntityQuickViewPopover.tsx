@@ -18,7 +18,7 @@ export function EntityQuickViewPopover({ resourcePath, id, onEdit, children }: E
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent align="start" side="bottom">
+      <PopoverContent align="start" side="bottom" className="max-h-[70vh] overflow-y-auto">
         {open && (
           <EntityQuickView
             resourcePath={resourcePath}
