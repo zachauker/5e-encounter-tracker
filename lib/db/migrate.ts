@@ -240,6 +240,11 @@ export function runMigrations() {
   addColumnIfMissing("maps", "height", "INTEGER");
   addColumnIfMissing("maps", "max_zoom", "INTEGER");
   addColumnIfMissing("map_markers", "min_zoom", "INTEGER");
+  addColumnIfMissing("map_markers", "size", "TEXT");
+  addColumnIfMissing("map_markers", "shape", "TEXT");
+  addColumnIfMissing("map_markers", "icon", "TEXT");
+  addColumnIfMissing("map_markers", "label_size", "TEXT");
+  addColumnIfMissing("map_markers", "color", "TEXT");
   addColumnIfMissing("reference_collections", "notes", "TEXT");
   addColumnIfMissing("locations", "type", "TEXT NOT NULL DEFAULT 'other'");
   for (const table of ["characters", "items", "factions", "locations"]) {

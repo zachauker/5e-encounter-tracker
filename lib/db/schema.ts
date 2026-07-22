@@ -216,6 +216,11 @@ export const mapMarkers = sqliteTable("map_markers", {
   title: text("title"),
   note: text("note"),
   minZoom: integer("min_zoom"),
+  size: text("size"),
+  shape: text("shape"),
+  icon: text("icon"),
+  labelSize: text("label_size"),
+  color: text("color"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });

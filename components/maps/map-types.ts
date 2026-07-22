@@ -11,6 +11,11 @@ export interface MarkerData {
   title: string | null;
   note: string | null;
   minZoom: number | null;
+  size: string | null;
+  shape: string | null;
+  icon: string | null;
+  labelSize: string | null;
+  color: string | null;
 }
 
 export interface ResolvedMarker extends MarkerData {
